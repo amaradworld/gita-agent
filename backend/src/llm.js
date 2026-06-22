@@ -1,6 +1,15 @@
-import { detectEmotions, findBestVerse, gitaVerses } from './gita.js';
+import {
+  detectEmotions,
+  findBestVerse,
+  findVerseByChapterVerse,
+  findVersesByChapter,
+  parseChapterVerse,
+  isVerseRequest,
+  isChapterRequest,
+  chapterNames,
+  gitaVerses
+} from './gita.js';
 
-const LLM_API = process.env.LLM_API || 'openai';
 const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
 const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
 
@@ -16,12 +25,14 @@ CORE RULES:
 - Never dismiss emotions — validate them first, then offer Gita wisdom
 - Sometimes just listen and acknowledge pain without offering solutions
 - End with a gentle, uplifting thought or question
+- When asked about a specific chapter or verse, provide detailed explanation of that verse with its context and meaning
+- When asked about a chapter, summarize the key teachings of that chapter
 
 RESPONSE FORMAT:
 1. Acknowledge their emotion (1 sentence)
 2. Share relevant Gita wisdom (1-2 sentences with verse reference)
 3. Practical, loving advice (1-2 sentences)
-4. A gentle closing thought`;
+4. A gentle closing thought or question`;
 
 async function callOpenAI(messages) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -33,7 +44,7 @@ async function callOpenAI(messages) {
     body: JSON.stringify({
       model: 'gpt-4o-mini',
       messages,
-      max_tokens: 500,
+      max_tokens: 600,
       temperature: 0.7,
     }),
   });
@@ -55,7 +66,7 @@ async function callGemini(messages) {
       body: JSON.stringify({
         contents,
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
+        generationConfig: { maxOutputTokens: 600, temperature: 0.7 },
       }),
     }
   );
@@ -67,6 +78,59 @@ export async function generateResponse(userMessage, chatHistory = []) {
   const emotions = detectEmotions(userMessage);
   const verse = findBestVerse(emotions);
 
+  // Check if user is asking for a specific verse or chapter
+  if (isVerseRequest(userMessage)) {
+    const parsed = parseChapterVerse(userMessage);
+
+    // Specific verse requested: "chapter 4 verse 7" or "4.7"
+    if (parsed && parsed.chapter && parsed.verse) {
+      const specificVerse = findVerseByChapterVerse(parsed.chapter, parsed.verse);
+      if (specificVerse) {
+        const chapterInfo = chapterNames[parsed.chapter] || {};
+        return buildVerseResponse(
+          `You asked for Chapter ${parsed.chapter}, Verse ${parsed.verse} — ${chapterInfo.english || ''} (${chapterInfo.subtitle || ''}). Here it is:`,
+          specificVerse,
+          []
+        );
+      } else {
+        // Verse not in our database — search nearby verses
+        const chapterVerses = findVersesByChapter(parsed.chapter);
+        if (chapterVerses.length > 0) {
+          return buildVerseResponse(
+            `I don't have Verse ${parsed.verse} of Chapter ${parsed.chapter} in my collection, but here is a verse from that chapter that may help:`,
+            chapterVerses[0],
+            []
+          );
+        }
+        return {
+          message: `I don't have Chapter ${parsed.chapter}, Verse ${parsed.verse} in my collection. The Bhagavad Gita has 700 verses across 18 chapters. My collection covers the most important verses. Try asking about a specific topic, and I'll find the best verse for you.`,
+          verse: { chapter: parsed.chapter, verse: parsed.verse, sanskrit: '', translation: 'Verse not in collection', explanation: '', advice: '' },
+          emotions,
+        };
+      }
+    }
+
+    // Chapter requested without specific verse
+    if (parsed && parsed.chapter && !parsed.verse) {
+      const chapterVerses = findVersesByChapter(parsed.chapter);
+      const chapterInfo = chapterNames[parsed.chapter] || {};
+      if (chapterVerses.length > 0) {
+        // Return first verse of the chapter
+        return buildVerseResponse(
+          `Here is Chapter ${parsed.chapter} — ${chapterInfo.english || ''} (${chapterInfo.subtitle || ''}). This chapter has ${chapterVerses.length} verse(s) in my collection. Here is the first one:`,
+          chapterVerses[0],
+          chapterVerses.slice(1) // additional verses for context
+        );
+      }
+      return {
+        message: `I don't have Chapter ${parsed.chapter} in my collection yet. The chapter is called "${chapterInfo.english || 'Unknown'}" (${chapterInfo.subtitle || ''}). Try asking about a topic, and I'll find the best verse from the Gita for you.`,
+        verse: { chapter: parsed.chapter, verse: 1, sanskrit: '', translation: 'Chapter not yet in collection', explanation: '', advice: '' },
+        emotions,
+      };
+    }
+  }
+
+  // Regular emotional query — use emotion-based verse matching
   const verseContext = `
 RELEVANT GITA VERSE:
 Chapter ${verse.chapter}, Verse ${verse.verse}
@@ -75,8 +139,7 @@ Translation: "${verse.translation}"
 Explanation: ${verse.explanation}
 Related Advice: ${verse.advice}
 
-Detected emotions: ${emotions.join(', ')}
-`;
+Detected emotions: ${emotions.join(', ')}`;
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT + '\n\n' + verseContext },
@@ -91,7 +154,6 @@ Detected emotions: ${emotions.join(', ')}
   } else if (GEMINI_KEY) {
     aiResponse = await callGemini(messages);
   } else {
-    // Fallback: generate without LLM
     aiResponse = generateFallbackResponse(userMessage, emotions, verse);
   }
 
@@ -108,9 +170,39 @@ Detected emotions: ${emotions.join(', ')}
   };
 }
 
-function generateFallbackResponse(userMessage, emotions, verse) {
-  const chapterText = verse.chapter <= 9 ? thisChapterNames[verse.chapter - 1] : otherChapterNames[verse.chapter - 10] || '';
+function buildVerseResponse(opener, verse, additionalVerses = []) {
+  let message = `${opener}
 
+**Chapter ${verse.chapter}, Verse ${verse.verse}**
+*Sanskrit:* ${verse.sanskrit}
+
+*Translation:* "${verse.translation}"
+
+${verse.explanation}
+
+${verse.advice}`;
+
+  if (additionalVerses.length > 0) {
+    message += '\n\n---\n\nHere are more verses from this chapter:\n';
+    for (const v of additionalVerses) {
+      message += `\n**Verse ${verse.chapter}.${v.verse}**: "${v.translation}"\n`;
+    }
+  }
+
+  return {
+    message,
+    verse: {
+      chapter: verse.chapter,
+      verse: verse.verse,
+      sanskrit: verse.sanskrit,
+      translation: verse.translation,
+      explanation: verse.explanation,
+    },
+    emotions: [],
+  };
+}
+
+function generateFallbackResponse(userMessage, emotions, verse) {
   const openers = {
     anxiety: [
       `I feel you. Anxiety can be overwhelming, but you are not alone in this.`,

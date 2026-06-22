@@ -3,6 +3,27 @@ import toast from 'react-hot-toast';
 
 const API = '';
 
+const CHAPTER_NAMES = {
+  1: { english: 'Arjuna Vishada Yoga', subtitle: 'Yoga of Arjuna\'s Dejection' },
+  2: { english: 'Sankhya Yoga', subtitle: 'Yoga of Knowledge' },
+  3: { english: 'Karma Yoga', subtitle: 'Yoga of Action' },
+  4: { english: 'Jnana Yoga', subtitle: 'Yoga of Knowledge' },
+  5: { english: 'Karma Sannyasa Yoga', subtitle: 'Yoga of Renunciation' },
+  6: { english: 'Dhyana Yoga', subtitle: 'Yoga of Meditation' },
+  7: { english: 'Jnana Vijnana Yoga', subtitle: 'Yoga of Wisdom & Realization' },
+  8: { english: 'Akshara Brahma Yoga', subtitle: 'Yoga of the Imperishable' },
+  9: { english: 'Raja Vidya Rahasya Yoga', subtitle: 'Yoga of the King of Knowledge' },
+  10: { english: 'Vibhuti Yoga', subtitle: 'Yoga of Divine Glories' },
+  11: { english: 'Vishvarupa Darshana Yoga', subtitle: 'Yoga of the Universal Form' },
+  12: { english: 'Bhakti Yoga', subtitle: 'Yoga of Devotion' },
+  13: { english: 'Prakriti Purusha Viveka Yoga', subtitle: 'Yoga of Nature & Spirit' },
+  14: { english: 'Guna Traya Vibhaga Yoga', subtitle: 'Yoga of the Three Qualities' },
+  15: { english: 'Purushottama Yoga', subtitle: 'Yoga of the Supreme Being' },
+  16: { english: 'Daiva Asura Sampad Vibhaga Yoga', subtitle: 'Yoga of Divine & Demoniac Natures' },
+  17: { english: 'Shraddhatraya Vibhaga Yoga', subtitle: 'Yoga of the Threefold Faith' },
+  18: { english: 'Moksha Sannyasa Yoga', subtitle: 'Yoga of Liberation' },
+};
+
 function VerseCard({ verse }) {
   const [expanded, setExpanded] = useState(false);
   if (!verse) return null;
@@ -22,6 +43,108 @@ function VerseCard({ verse }) {
         </div>
       )}
       <p className="text-saffron-400 text-xs mt-2">{expanded ? 'Click to collapse' : 'Click to read more'}</p>
+    </div>
+  );
+}
+
+function ChapterBrowser({ onSelectVerse, onClose }) {
+  const [chapters, setChapters] = useState([]);
+  const [selectedChapter, setSelectedChapter] = useState(null);
+  const [chapterVerses, setChapterVerses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API}/api/chapters`)
+      .then(r => r.json())
+      .then(data => { setChapters(data.chapters || []); setLoading(false); })
+      .catch(() => { setLoading(false); toast.error('Failed to load chapters'); });
+  }, []);
+
+  const loadChapter = (num) => {
+    setSelectedChapter(num);
+    setLoading(true);
+    fetch(`${API}/api/chapters/${num}`)
+      .then(r => r.json())
+      .then(data => { setChapterVerses(data.verses || []); setLoading(false); })
+      .catch(() => { setLoading(false); toast.error('Failed to load verses'); });
+  };
+
+  const handleVerseClick = (verse) => {
+    onSelectVerse(`Tell me about Chapter ${verse.chapter}, Verse ${verse.verse}`);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-gradient-to-b from-gray-900 to-gray-950 border border-white/10 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <div>
+            <h2 className="text-saffron-100 font-bold text-lg">Bhagavad Gita</h2>
+            <p className="text-gray-400 text-xs">18 Chapters · 700+ Verses</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {!selectedChapter ? (
+            <div className="space-y-2">
+              {chapters.map(ch => (
+                <button
+                  key={ch.chapter}
+                  onClick={() => loadChapter(ch.chapter)}
+                  className="w-full text-left bg-white/5 hover:bg-white/10 border border-white/5 hover:border-saffron-600/30 rounded-xl px-4 py-3 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-saffron-400 text-xs font-bold">Chapter {ch.chapter}</span>
+                      <h3 className="text-saffron-100 text-sm font-medium mt-0.5">{ch.english}</h3>
+                      <p className="text-gray-500 text-xs">{ch.subtitle}</p>
+                    </div>
+                    <span className="text-gray-600 text-xs">{ch.verseCount} verses →</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <button
+                onClick={() => setSelectedChapter(null)}
+                className="text-saffron-400 text-xs hover:text-saffron-300 mb-3 flex items-center gap-1"
+              >
+                ← Back to chapters
+              </button>
+              <h3 className="text-saffron-100 font-bold mb-1">
+                Chapter {selectedChapter} — {CHAPTER_NAMES[selectedChapter]?.english}
+              </h3>
+              <p className="text-gray-500 text-xs mb-4">{CHAPTER_NAMES[selectedChapter]?.subtitle}</p>
+
+              {loading ? (
+                <div className="text-center text-gray-500 py-8">Loading verses...</div>
+              ) : chapterVerses.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">No verses available for this chapter yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {chapterVerses.map(v => (
+                    <button
+                      key={`${v.chapter}-${v.verse}`}
+                      onClick={() => handleVerseClick(v)}
+                      className="w-full text-left bg-white/5 hover:bg-saffron-600/10 border border-white/5 hover:border-saffron-600/30 rounded-xl p-4 transition-all"
+                    >
+                      <span className="text-saffron-400 text-xs font-bold">Verse {v.chapter}.{v.verse}</span>
+                      <p className="text-saffron-200 text-sm italic mt-1">{v.sanskrit}</p>
+                      <p className="text-gray-300 text-sm mt-1">"{v.translation}"</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -68,6 +191,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingId, setSpeakingId] = useState(null);
+  const [showChapterBrowser, setShowChapterBrowser] = useState(false);
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -241,6 +365,17 @@ export default function App() {
             </div>
           </div>
           <div className="text-xs text-gray-500 hidden sm:block">Bhagavad Gita Wisdom</div>
+          <button
+            onClick={() => setShowChapterBrowser(true)}
+            className="text-gray-400 hover:text-saffron-400 p-2 rounded-lg hover:bg-white/5 transition-colors"
+            title="Browse all chapters"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+              <path d="M8 7h6"/>
+              <path d="M8 11h8"/>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -333,6 +468,16 @@ export default function App() {
         </div>
         <p className="text-center text-[10px] text-gray-600 mt-2">Powered by Bhagavad Gita wisdom</p>
       </footer>
+
+      {showChapterBrowser && (
+        <ChapterBrowser
+          onSelectVerse={(msg) => {
+            setInput(msg);
+            setTimeout(() => sendMessage(), 100);
+          }}
+          onClose={() => setShowChapterBrowser(false)}
+        />
+      )}
     </div>
   );
 }

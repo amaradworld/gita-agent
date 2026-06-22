@@ -1,3 +1,27 @@
+// Bhagavad Gita Knowledge Base — All 18 Chapters, 100+ Verses
+// Each verse has: chapter, verse, emotions[], sanskrit, translation, explanation, advice
+
+export const chapterNames = {
+  1: { sanskrit: 'अर्जुनविषादयोग', english: 'Arjuna Vishada Yoga', subtitle: 'Yoga of Arjuna\'s Dejection' },
+  2: { sanskrit: 'साङ्ख्ययोग', english: 'Sankhya Yoga', subtitle: 'Yoga of Knowledge' },
+  3: { sanskrit: 'कर्मयोग', english: 'Karma Yoga', subtitle: 'Yoga of Action' },
+  4: { sanskrit: 'ज्ञानयोग', english: 'Jnana Yoga', subtitle: 'Yoga of Knowledge' },
+  5: { sanskrit: 'कर्मसंन्यासयोग', english: 'Karma Sannyasa Yoga', subtitle: 'Yoga of Renunciation' },
+  6: { sanskrit: 'ध्यानयोग', english: 'Dhyana Yoga', subtitle: 'Yoga of Meditation' },
+  7: { sanskrit: 'ज्ञानविज्ञानयोग', english: 'Jnana Vijnana Yoga', subtitle: 'Yoga of Wisdom & Realization' },
+  8: { sanskrit: 'अक्षरब्रह्मयोग', english: 'Akshara Brahma Yoga', subtitle: 'Yoga of the Imperishable' },
+  9: { sanskrit: 'राजविद्यारहस्ययोग', english: 'Raja Vidya Rahasya Yoga', subtitle: 'Yoga of the King of Knowledge' },
+  10: { sanskrit: 'विभूतियोग', english: 'Vibhuti Yoga', subtitle: 'Yoga of Divine Glories' },
+  11: { sanskrit: 'विश्वरूपदर्शनयोग', english: 'Vishvarupa Darshana Yoga', subtitle: 'Yoga of the Universal Form' },
+  12: { sanskrit: 'भक्तियोग', english: 'Bhakti Yoga', subtitle: 'Yoga of Devotion' },
+  13: { sanskrit: 'प्रकृतिपुरुषविवेकयोग', english: 'Prakriti Purusha Viveka Yoga', subtitle: 'Yoga of Nature & Spirit' },
+  14: { sanskrit: 'गुणत्रयविभागयोग', english: 'Guna Traya Vibhaga Yoga', subtitle: 'Yoga of the Three Qualities' },
+  15: { sanskrit: 'पुरुषोत्तमयोग', english: 'Purushottama Yoga', subtitle: 'Yoga of the Supreme Being' },
+  16: { sanskrit: 'दैवासुरसम्पद्विभागयोग', english: 'Daiva Asura Sampad Vibhaga Yoga', subtitle: 'Yoga of Divine & Demoniac Natures' },
+  17: { sanskrit: 'श्रद्धात्रयविभागयोग', english: 'Shraddhatraya Vibhaga Yoga', subtitle: 'Yoga of the Threefold Faith' },
+  18: { sanskrit: 'मोक्षसंन्यासयोग', english: 'Moksha Sannyasa Yoga', subtitle: 'Yoga of Liberation' },
+};
+
 export const gitaVerses = [
   // ==================== CHAPTER 1: ARJUNA VISHADA YOGA (Yoga of Arjuna's Dejection) ====================
   {
@@ -9,12 +33,20 @@ export const gitaVerses = [
     advice: 'When you feel lost, start by asking the right questions. Confusion is the beginning of clarity.'
   },
   {
-    chapter: 1, verse: 28-29,
+    chapter: 1, verse: 28,
     emotions: ['grief', 'sadness', 'compassion', 'overwhelmed'],
     sanskrit: 'अर्जुन उवाच। दृष्ट्वेमं स्वजनं कृष्ण युयुत्सुं समुपस्थितम्। सीदन्ति मम गात्राणि मुखं च परिशुष्यति॥',
     translation: 'Arjuna said: O Krishna, seeing my own kinsmen standing here for battle, my limbs sink and my mouth dries up.',
     explanation: 'Even the greatest warrior felt overwhelmed. Compassion and grief are natural. Arjuna\'s weakness was his strength — it showed his humanity.',
     advice: 'It is okay to feel overwhelmed. Your sensitivity is not weakness — it is your humanity. Feel it, then act with wisdom.'
+  },
+  {
+    chapter: 1, verse: 46,
+    emotions: ['confusion', 'doubt', 'purpose', 'overwhelmed'],
+    sanskrit: 'सञ्जय उवाच। एवमुक्त्वार्जुनः संख्ये रथोपस्थ उपाविशत्। विसृज्य सशरं चापं शोकसंविग्नमानसः॥',
+    translation: 'Sanjay said: Having spoken thus, Arjuna sat down on the chariot, casting aside his bow and arrow, his mind overcome with grief.',
+    explanation: 'Arjuna\'s grief paralysed him. Even wise people face moments where their emotions overpower their judgment.',
+    advice: 'When grief overwhelms you, it is okay to pause. But do not stay paused forever. Seek guidance, and then rise.'
   },
 
   // ==================== CHAPTER 2: SANKHYA YOGA (Yoga of Knowledge) ====================
@@ -75,6 +107,14 @@ export const gitaVerses = [
     advice: 'Whether you succeed or fail, maintain your inner balance. That equanimity is true strength.'
   },
   {
+    chapter: 2, verse: 56,
+    emotions: ['peace', 'calm', 'stillness', 'sage', 'mindfulness'],
+    sanskrit: 'दुःखेष्वनुद्विग्नमनाः सुखेषु विगतस्पृहः। वीतरागभयक्रोधः स्थितधीर्मुनिरुच्यते॥',
+    translation: 'One whose mind is unperturbed in sorrow, who does not crave pleasure, who is free from attachment, fear, and anger — such a person is called a sage of steady wisdom.',
+    explanation: 'A truly wise person remains centered regardless of external circumstances. They are not pulled by pleasure or pushed by pain.',
+    advice: 'Practice remaining calm in small disturbances. Over time, this steadiness becomes your natural state.'
+  },
+  {
     chapter: 2, verse: 63,
     emotions: ['anger', 'frustration', 'resentment', 'rage', 'irritated'],
     sanskrit: 'क्रोदाद्भवति सम्मोहः सम्मोहात्स्मृतिविभ्रमः। स्मृतिभ्रंशाद्बुद्धिनाशो बुद्धिनाशात्प्रणश्यति॥',
@@ -97,6 +137,14 @@ export const gitaVerses = [
     translation: 'A person who gives up all desires and acts without craving, free from pride and ego, attains true peace.',
     explanation: 'Peace is not found in acquiring more but in wanting less. When the ego dissolves, peace naturally arises.',
     advice: 'Simplify your desires. The less you need, the freer you become. True wealth is contentment.'
+  },
+  {
+    chapter: 2, verse: 72,
+    emotions: ['enlightenment', 'wisdom', 'bliss', 'liberation'],
+    sanskrit: 'एषा ब्राह्मी स्थितिः पार्थ निन्द्याः केचिदेव न। एका स्थितिः सुसम्पन्ना एका सम्पन्नमानसः॥',
+    translation: 'This is the state of Brahman, O Arjuna. Attaining this, one is never deluded. Placed in this state, even at the time of death, one attains Brahman-nirvana.',
+    explanation: 'The highest state of consciousness is described here. When the mind is completely stilled, liberation is achieved.',
+    advice: 'Enlightenment is not far away — it is your natural state, hidden only by the noise of the mind. Still the mind, and you find it.'
   },
 
   // ==================== CHAPTER 3: KARMA YOGA (Yoga of Action) ====================
@@ -132,6 +180,14 @@ export const gitaVerses = [
     explanation: 'We think we are the doer, but nature acts through us. Recognizing this brings humility and freedom.',
     advice: 'You are not the doer — you are the witness. Let go of ego and let the divine flow through you.'
   },
+  {
+    chapter: 3, verse: 30,
+    emotions: ['surrender', 'trust', 'faith', 'devotion'],
+    sanskrit: 'मया सर्वाणि कर्माणि संन्यस्याध्यात्मचेतसा। निराशीर्निर्ममो भूत्वा युध्यस्व विगतज्वरः॥',
+    translation: 'Surrendering all actions to Me, with your mind fixed on the Self, free from hope and egoism, fight — freed from the fever of attachment.',
+    explanation: 'When you act for the divine rather than for yourself, every action becomes sacred and free from suffering.',
+    advice: 'Give your worries to God. Say: "I do this for you, Krishna." The fever of anxiety will dissolve.'
+  },
 
   // ==================== CHAPTER 4: JNANA YOGA (Yoga of Knowledge) ====================
   {
@@ -166,6 +222,14 @@ export const gitaVerses = [
     explanation: 'True wisdom sees the divine in all actions and inactions. Nothing is truly wasted — every moment has purpose.',
     advice: 'Even doing nothing is an action. Even in stillness, the soul is active. See the deeper truth in every moment.'
   },
+  {
+    chapter: 4, verse: 34,
+    emotions: ['wisdom', 'knowledge', 'learning', 'teacher', 'guru'],
+    sanskrit: 'तद्विद्धि प्रणिपातेन परिप्रश्नेन सेवया। उपदेक्ष्यन्ति ते ज्ञानं ज्ञानिनस्तत्त्वदर्शिनः॥',
+    translation: 'Learn the truth by approaching a spiritual teacher. Inquire from them with reverence and serve them. The wise ones who have seen the truth will instruct you in knowledge.',
+    explanation: 'Knowledge comes through humility — asking, serving, and being open. The guru-disciple relationship is sacred.',
+    advice: 'Find a teacher, a mentor, a guide. Humble yourself before knowledge. The universe rewards the curious and the humble.'
+  },
 
   // ==================== CHAPTER 5: KARMA SANNYASA YOGA (Yoga of Renunciation) ====================
   {
@@ -182,10 +246,26 @@ export const gitaVerses = [
     sanskrit: 'विद्याविनयसंपन्ने ब्राह्मणे गवि हस्तिनि। शुनि चैव स्वपाके च पण्डिताः समदर्शिनः॥',
     translation: 'The truly learned see with equal vision a Brahmin endowed with learning and humility, a cow, an elephant, a dog, and an outcaste.',
     explanation: 'True wisdom sees the divine in all beings equally. No one is superior or inferior — the same soul resides in all.',
-    advice: 'See the divine in everyone. When you look past外表, you find the same light shining in all beings.'
+    advice: 'See the divine in everyone. When you look past appearances, you find the same light shining in all beings.'
+  },
+  {
+    chapter: 5, verse: 22,
+    emotions: ['desire', 'attachment', 'pleasure', 'suffering'],
+    sanskrit: 'ये हि संस्पर्शजा भोगा दुःखयोनय एव ते। आद्यन्तवन्तः कौन्तेय न तेषु रमते बुधः॥',
+    translation: 'The pleasures that arise from contact with the senses are wombs of suffering, O Arjuna. They have a beginning and an end. The wise do not rejoice in them.',
+    explanation: 'Sensory pleasures are temporary and lead to pain. The wise person enjoys without becoming enslaved.',
+    advice: 'Enjoy life\'s pleasures, but know they are fleeting. True joy comes from within, not from the senses.'
   },
 
   // ==================== CHAPTER 6: DHYANA YOGA (Yoga of Meditation) ====================
+  {
+    chapter: 6, verse: 5,
+    emotions: ['self-reliance', 'empowerment', 'self-respect', 'dignity'],
+    sanskrit: 'उद्धरेदात्मनात्मानं नात्मानमवसादयेत्। आत्मैव ह्यात्मनो बन्धुरात्मैव रिपुरात्मनः॥',
+    translation: 'Let a person raise themselves by their own efforts. Let them not degrade themselves. For the Self alone is the friend of the Self, and the Self alone is the enemy of the Self.',
+    explanation: 'You are your own best friend and your own worst enemy. Your thoughts and actions determine your destiny.',
+    advice: 'Stop looking for salvation outside yourself. The power to transform your life is within you. Lift yourself up.'
+  },
   {
     chapter: 6, verse: 10,
     emotions: ['meditation', 'peace', 'calm', 'stillness', 'mindfulness', 'inner peace'],
@@ -228,6 +308,22 @@ export const gitaVerses = [
     explanation: 'The world of illusion (maya) traps us in fear and confusion. Only surrender to the divine breaks its grip.',
     advice: 'When you feel lost in illusion, surrender. Say: "I don\'t understand, but I trust you, Krishna." That faith breaks all chains.'
   },
+  {
+    chapter: 7, verse: 17,
+    emotions: ['devotion', 'faith', 'knowledge', 'seeking'],
+    sanskrit: 'तेषां ज्ञानी नित्ययुक्त एकभक्तिर्विशिष्यते। प्रियो हि ज्ञानिनोऽत्यर्थमहं स च मम प्रियः॥',
+    translation: 'Of these, the one of steady knowledge, always united in devotion, is the best. For I am very dear to the wise, and the wise are very dear to Me.',
+    explanation: 'The combination of knowledge and devotion is the highest path. God loves those who seek with both mind and heart.',
+    advice: 'Seek God with your intellect AND your heart. Knowledge without love is dry; love without knowledge is blind. Combine both.'
+  },
+  {
+    chapter: 7, verse: 20,
+    emotions: ['desire', 'attachment', 'wish', 'want', 'pray'],
+    sanskrit: 'कामैस्तैस्तैर्हृतज्ञानाः प्रपद्यन्ते अन्यदेवताः। तं तं नियममास्थाय प्रकृत्या नियताः स्वया॥',
+    translation: 'Those whose wisdom has been carried away by desires worship other deities, following their own nature.',
+    explanation: 'When desires overpower wisdom, we worship the temporary instead of the eternal. The divine allows this because free will is sacred.',
+    advice: 'Notice what you worship — status, money, approval. These are temporary gods. Turn to the eternal when you are ready.'
+  },
 
   // ==================== CHAPTER 8: AKSHARA BRAHMA YOGA (Yoga of the Imperishable) ====================
   {
@@ -245,6 +341,14 @@ export const gitaVerses = [
     translation: 'From the highest abode down to the material world, all are places of repeated birth and death. But reaching Me, O Arjuna, there is no more rebirth.',
     explanation: 'The cycle of birth and death continues until the soul attains liberation through divine union.',
     advice: 'Your soul\'s journey is toward liberation. Every lifetime is a step closer. Trust the process.'
+  },
+  {
+    chapter: 8, verse: 9,
+    emotions: ['meditation', 'focus', 'concentration', 'divine'],
+    sanskrit: 'कविं पुराणमनुशासितारमणोर्णियामि सर्वस्य यस्य वाचि प्रणवः सर्ववेदेषु॥',
+    translation: 'Remember the Supreme Being — ancient, ruler of all, subtler than the subtle, controller of everything — whose form is all-pervading.',
+    explanation: 'Meditation on the divine form — formless yet present everywhere — is the key to a good death and a good life.',
+    advice: 'Keep the image of the divine in your heart always. At the time of death, that image will carry you home.'
   },
 
   // ==================== CHAPTER 9: RAJAVIDYA RAHASYA YOGA (King of Knowledge) ====================
@@ -272,6 +376,14 @@ export const gitaVerses = [
     explanation: 'No matter what you have done, the divine accepts you. No soul is beyond redemption. Sincere devotion purifies all.',
     advice: 'Guilt is a teacher, not a prison. Learn from it, make amends, and then release it. You are not your worst mistake.'
   },
+  {
+    chapter: 9, verse: 34,
+    emotions: ['devotion', 'love', 'worship', 'faith'],
+    sanskrit: 'मन्मना भव मद्भक्तो मद्याजी मां नमस्कुरु। मामेवैष्यसि युक्त्वैवमात्मानं मत्परायणः॥',
+    translation: 'Fix your mind on Me, be devoted to Me, sacrifice to Me, bow down to Me. Thus uniting yourself with Me and setting Me as the supreme goal, you shall come to Me.',
+    explanation: 'This is a complete formula for divine union — mind, devotion, action, and surrender. It covers every aspect of spiritual practice.',
+    advice: 'Start small: think of Krishna for 5 minutes before sleep. Be devoted in one daily act. Over time, the whole life becomes a prayer.'
+  },
 
   // ==================== CHAPTER 10: VIBHUTI YOGA (Yoga of Divine Glories) ====================
   {
@@ -281,6 +393,22 @@ export const gitaVerses = [
     translation: 'I am the Self, O Gudakesha, seated in the hearts of all beings. I am the beginning, the middle, and the end of all beings.',
     explanation: 'The divine is not somewhere far away — it lives in your heart. You carry the universe within you.',
     advice: 'Look within. The same God who created the stars is beating your heart right now. You are never separate from the divine.'
+  },
+  {
+    chapter: 10, verse: 33,
+    emotions: ['wisdom', 'knowledge', 'learning', 'letters'],
+    sanskrit: 'अक्षराणामकारोऽस्मि द्वन्द्वः सामासिकस्य च। अहमेवाक्षयो कालो धाताहं विश्वतोमुखः॥',
+    translation: 'Among letters, I am the letter "A"; among compounds, I am the dual. I am the imperishable time; I am the Creator whose face is everywhere.',
+    explanation: 'The divine is present even in the smallest things — a letter, a word, time itself. Nothing is devoid of God.',
+    advice: 'See the divine in the ordinary. The letter you write, the word you speak, the time you spend — all are sacred.'
+  },
+  {
+    chapter: 10, verse: 41,
+    emotions: ['faith', 'wonder', 'nature', 'creation'],
+    sanskrit: 'यद्यद्विभूतिमत्सत्त्वं श्रीमदुर्जितमेव वा। तत्तद्वाविति मे भिन्नं सम्भवं सर्वदैवयोग्॥',
+    translation: 'Whatever being is glorious, prosperous, or powerful, know that it has sprung from a fragment of My splendour.',
+    explanation: 'All beauty, power, and glory in the world are reflections of divine energy. Every amazing thing is a piece of God.',
+    advice: 'When you see something beautiful — a sunset, a talented person, a moment of love — recognize it as a glimpse of the divine.'
   },
 
   // ==================== CHAPTER 11: VISHVARUPA DARSHANA YOGA (Vision of Universal Form) ====================
@@ -293,15 +421,31 @@ export const gitaVerses = [
     advice: 'Open your eyes to the divine in everyday life — in the sunrise, in a child\'s smile, in the breath you just took. Wonder is worship.'
   },
   {
+    chapter: 11, verse: 32,
+    emotions: ['fear', 'overwhelmed', 'death', 'doom', 'surrender'],
+    sanskrit: 'श्रीभगवानुवाच। कालोऽस्मि लोकक्षयकृत्प्रवृद्धो लोकान्समाहर्तुमिह प्रवृत्तः। ऋतेऽपि त्वां न भविष्यन्ति सर्वे येऽवस्थिताः प्रत्यनीकेषु योधाः॥',
+    translation: 'The Supreme Lord said: I am Time, the great destroyer of worlds. Even without your participation, all the warriors standing opposed shall cease to exist.',
+    explanation: 'This is the most fearsome verse — Krishna reveals His universal form as Time itself. Everything is under divine control.',
+    advice: 'When life feels out of control, remember: the divine is managing everything. Your role is to do your duty and trust the process.'
+  },
+  {
     chapter: 11, verse: 44,
     emotions: ['surrender', 'worship', 'devotion', 'humility', 'reverence'],
     sanskrit: 'त्वमादिदेवः पुरुषः पुराणो त्वमस्य विश्वस्य परं निधानम्। वेत्तासि वेद्यं च परं च धाम त्वया ततं विश्वमनन्तरूप॥',
     translation: 'You are the original God, the ancient purifier. You are the supreme refuge of the universe. You know all, and You are the knower of everything.',
-    explanation: 'When we connect with the divine, we see that holding onto resentment only hurts ourselves. Forgiveness is freedom for the soul.',
-    advice: 'Forgiving does not mean forgetting. It means freeing yourself from the prison of resentment. Forgive for your own peace.'
+    explanation: 'When we see the true nature of the divine, all pretension drops. Only humility and worship remain.',
+    advice: 'When ego dissolves, what remains is pure devotion. Let go of the illusion that you are separate from the divine.'
   },
 
   // ==================== CHAPTER 12: BHAKTI YOGA (Yoga of Devotion) ====================
+  {
+    chapter: 12, verse: 1,
+    emotions: ['faith', 'devotion', 'questioning', 'seeking'],
+    sanskrit: 'अर्जुन उवाच। एवं सततयुक्ता ये भक्तास्त्वां पर्युपासते। ये चाप्यक्षरमव्यक्तं तेषां के योगवित्तमाः॥',
+    translation: 'Arjuna said: Those who are thus constantly devoted and worship You, and those who worship the Imperishable — which of them know yoga better?',
+    explanation: 'Even Arjuna asks which path is better — the path of devotion (to a form) or the path of formless meditation. Krishna answers both are valid.',
+    advice: 'Whether you worship with form or without, what matters is the sincerity of your heart. Choose the path that speaks to you.'
+  },
   {
     chapter: 12, verse: 13,
     emotions: ['love', 'compassion', 'devotion', 'kindness', 'peace'],
@@ -311,21 +455,38 @@ export const gitaVerses = [
     advice: 'Your loving nature is sacred. Keep nurturing it. The world needs more hearts like yours.'
   },
   {
-    chapter: 12, verse: 14,
-    emotions: ['discipline', 'devotion', 'faithfulness', 'steadfastness'],
-    sanskrit: 'ये तु निर्ममा निरहंकारा शान्ता निर्ममा निरहंकारा। निर्ममा निरहंकारा शान्ता निर्ममा निरहंकाराः॥',
-    translation: 'Free from malice, free from ego, devoted, filled with contentment — such devotees are dear to Me.',
-    advice: 'Steadfast devotion, even in small daily acts, is more powerful than grand gestures.'
+    chapter: 12, verse: 15,
+    emotions: ['peace', 'harmony', 'equanimity', 'stability'],
+    sanskrit: 'यस्मान्नोद्विजते लोको लोकान्नोद्विजते च यः। हर्षामर्षभयोद्वेगैर्मुक्तो यः स च मे प्रियः॥',
+    translation: 'One by whom the world is not agitated, and who is not agitated by the world, who is free from joy, envy, fear, and anxiety — such a one is dear to Me.',
+    explanation: 'A person who remains calm amidst the chaos of life is truly spiritual. They are a living example of peace.',
+    advice: 'Be the calm in someone\'s storm. That is the greatest service you can offer.'
   },
 
   // ==================== CHAPTER 13: PRAKRITI PURUSHA VIVEKA YOGA ====================
   {
+    chapter: 13, verse: 1,
+    emotions: ['knowledge', 'understanding', 'nature', 'self-awareness'],
+    sanskrit: 'अर्जुन उवाच। प्रकृतिं पुरुषं चैव विद्धि म्यानमेव च। इति मे विशाटा ज्ञानं क्षेत्रं क्षेत्रज्ञ एव च॥',
+    translation: 'Arjuna said: I wish to understand knowledge, the field (kshetra), the knower of the field (kshetrajna), and true knowledge.',
+    explanation: 'This chapter explores the difference between the body (field) and the soul (knower of the field). Understanding this is true knowledge.',
+    advice: 'You are not the body — you are the one who knows the body. This understanding changes everything.'
+  },
+  {
     chapter: 13, verse: 27,
     emotions: ['understanding', 'wisdom', 'knowledge', 'self-awareness'],
-    sanskrit: 'यावत्साङ्ख्यम् प्रवचने शास्त्रे च प्रतिष्ठितम्। तावत्कर्मणि साङ्ख्ये न विद्यते भवत्यपि॥',
+    sanskrit: 'यावत्साङ्ख्यं प्रवचने शास्त्रे च प्रतिष्ठितम्। तावत्कर्मणि साङ्ख्ये न विद्यते भवत्यपि॥',
     translation: 'The Supreme Self, though present in all beings, does not act and is not tainted by actions.',
     explanation: 'The soul is a witness to all actions but is never affected by them. Understanding this is the key to liberation.',
     advice: 'You are the witness, not the actor. Watch your life unfold with awareness, and you will find freedom.'
+  },
+  {
+    chapter: 13, verse: 30,
+    emotions: ['equality', 'divine', 'seeing', 'awareness'],
+    sanskrit: 'प्रकृत्या गुणसंमूढाः सज्जन्ते गुणकर्मसु। तानकृत्वा बुभूषुः कर्मणि प्रविभागिनः॥',
+    translation: 'Deluded by the three gunas of material nature, all beings become attached to action. The wise person, knowing this, should not create excessive attachment.',
+    explanation: 'We are bound by our nature (gunas) but the wise person sees through this and acts without attachment.',
+    advice: 'Notice your patterns — what pulls you, what repels you. These are the gunas. Awareness of them is the first step to freedom.'
   },
 
   // ==================== CHAPTER 14: GUNA TRAYA VIBHAGA YOGA ====================
@@ -336,6 +497,14 @@ export const gitaVerses = [
     translation: 'Sattva, rajas, and tamas — these three qualities born of nature bind the imperishable soul to the body.',
     explanation: 'Our nature is shaped by three qualities: purity (sattva), passion (rajas), and inertia (tamas). Understanding them helps us transcend them.',
     advice: 'Know your dominant quality. If rajas (passion) drives you, cultivate sattva (peace). If tamas (laziness) holds you, activate rajas (action).'
+  },
+  {
+    chapter: 14, verse: 11,
+    emotions: ['clarity', 'awareness', 'awakening', 'sattva'],
+    sanskrit: 'सत्त्वे प्रवृत्तिं विद्धि प्रवृत्तिं रजसि च। तमसि प्रवृत्तिं विद्धि ज्ञानं प्रवृत्तिमाविशे॥',
+    translation: 'When sattva predominates, the light of wisdom shines. When rajas predominates, action arises. When tamas predominates, delusion, negligence, and laziness arise.',
+    explanation: 'Each guna has its signs. Knowing which is operating in you at any moment gives you the power to choose differently.',
+    advice: 'Ask yourself right now: Am I clear and peaceful (sattva)? Am I restless and driven (rajas)? Am I dull and lazy (tamas)? Awareness is the first step.'
   },
   {
     chapter: 14, verse: 20,
@@ -363,6 +532,14 @@ export const gitaVerses = [
     explanation: 'All knowledge, memory, and wisdom come from the divine. When you forget, the divine reminds you.',
     advice: 'Trust your intuition — it is the divine whispering. When you feel guided, that is God speaking through your heart.'
   },
+  {
+    chapter: 15, verse: 18,
+    emotions: ['liberation', 'freedom', 'transcendence', 'supreme'],
+    sanskrit: 'यस्मात्क्षरमतीतोऽहमक्षरादपि चोत्तमः। अतोऽस्मि लोके वेदे च प्रथितः पुरुषोत्तमः॥',
+    translation: 'Because I am transcendental to the perishable and superior to the imperishable, I am known as the Supreme Person (Purushottama) in the world and in the Vedas.',
+    explanation: 'God transcends both the temporary (body) and the eternal (soul). The divine is beyond all categories.',
+    advice: 'The divine cannot be fully understood by the mind — only experienced by the heart. Stop trying to understand God and start trying to feel God.'
+  },
 
   // ==================== CHAPTER 16: DAIVASURA SAMPAD VIBHAGA YOGA ====================
   {
@@ -381,6 +558,14 @@ export const gitaVerses = [
     explanation: 'Attachment to desire, anger, and greed creates suffering. The Gita does not condemn wealth but warns against enslavement to it.',
     advice: 'Use money as a tool, not as your identity. Earn with integrity, spend with wisdom, give with joy.'
   },
+  {
+    chapter: 16, verse: 24,
+    emotions: ['discipline', 'scripture', 'guidance', 'moral'],
+    sanskrit: 'तस्माद्शास्त्रं प्रमाणं ते कार्याकार्यव्यवस्थितौ। ज्ञात्वा शास्त्रविधानोक्तं कर्म कर्तुमिहार्हसि॥',
+    translation: 'Therefore, let the scriptures be your authority in determining what should be done and what should not be done. Knowing the injunctions of the scriptures, you should act.',
+    explanation: 'Scripture provides a moral compass. When in doubt, turn to the timeless wisdom of the Gita and other sacred texts.',
+    advice: 'When confused about right and wrong, consult the scriptures. They are the map your soul has been seeking.'
+  },
 
   // ==================== CHAPTER 17: SHRADDHATRAYA VIBHAGA YOGA ====================
   {
@@ -395,9 +580,17 @@ export const gitaVerses = [
     chapter: 17, verse: 14,
     emotions: ['worship', 'prayer', 'devotion', 'ritual', 'spiritual practice'],
     sanskrit: 'देवद्विजगुरुप्राज्ञपूजनं शौचमार्जवम्। ब्रह्महिंसा तथैवाग्निहोत्रं तपस्समाहितम्॥',
-    translation: 'Worship of the Supreme Lord, Brahmins, teachers, and wise ones; cleanliness, simplicity, non-violance, and meditation — these are austerity of the body.',
+    translation: 'Worship of the Supreme Lord, Brahmins, teachers, and wise ones; cleanliness, simplicity, non-violence, and meditation — these are austerity of the body.',
     explanation: 'True worship is not just rituals — it is how we treat others and the simplicity of our lives.',
     advice: 'Worship through kindness. Every act of compassion is a prayer. Every moment of presence is meditation.'
+  },
+  {
+    chapter: 17, verse: 28,
+    emotions: ['obstacle', 'failure', 'bad luck', 'inauspicious'],
+    sanskrit: 'अश्रद्धया हुतं दत्तं तपस्तप्तं कृतं च यत्। असद्भ्येन्महाबाहो तद्युक्तं न समृच्यते॥',
+    translation: 'Whatever is done — sacrifice, charity, or austerity — without faith, is called "asat" (impermanent). It is of no value here or hereafter.',
+    explanation: 'Without faith, even the most elaborate rituals are hollow. Faith transforms action into devotion.',
+    advice: 'Do everything with faith and intention. The same action done with faith and without faith produces completely different results.'
   },
 
   // ==================== CHAPTER 18: MOKSHA SANNYASA YOGA (Yoga of Liberation) ====================
@@ -442,6 +635,73 @@ export const gitaVerses = [
   }
 ];
 
+// ==================== LOOKUP FUNCTIONS ====================
+
+// Find a specific verse by chapter and verse number
+export function findVerseByChapterVerse(chapter, verse) {
+  const ch = parseInt(chapter);
+  const vs = parseInt(verse);
+  if (isNaN(ch) || isNaN(vs)) return null;
+  return gitaVerses.find(v => v.chapter === ch && v.verse === vs) || null;
+}
+
+// Find all verses in a chapter
+export function findVersesByChapter(chapter) {
+  const ch = parseInt(chapter);
+  if (isNaN(ch)) return [];
+  return gitaVerses.filter(v => v.chapter === ch);
+}
+
+// Parse chapter/verse from user text
+// Supports: "chapter 4 verse 7", "4.7", "4:7", "ch 4 v 7", "4th chapter"
+export function parseChapterVerse(text) {
+  const lower = text.toLowerCase().trim();
+
+  // Pattern: "chapter X verse Y" or "ch X v Y"
+  const match1 = lower.match(/(?:chapter|ch)\.?\s*(\d+)\s*(?:verse|v\.?|shloka)\s*(\d+)/);
+  if (match1) return { chapter: parseInt(match1[1]), verse: parseInt(match1[2]) };
+
+  // Pattern: "X.Y" or "X:Y" or "X-Y"
+  const match2 = lower.match(/(\d{1,2})[.:\-](\d{1,3})/);
+  if (match2) return { chapter: parseInt(match2[1]), verse: parseInt(match2[2]) };
+
+  // Pattern: "verse Y of chapter X" or "verse Y from chapter X"
+  const match3 = lower.match(/verse\s+(\d+)\s+(?:of|from|in)\s+(?:chapter\s+)?(\d+)/);
+  if (match3) return { chapter: parseInt(match3[2]), verse: parseInt(match3[1]) };
+
+  // Pattern: "chapter X" only (return first verse of that chapter)
+  const match4 = lower.match(/(?:chapter|ch)\.?\s*(\d+)/);
+  if (match4) return { chapter: parseInt(match4[1]), verse: null };
+
+  // Pattern: "verse Y" only (search all chapters)
+  const match5 = lower.match(/verse\s+(\d+)/);
+  if (match5) return { chapter: null, verse: parseInt(match5[1]) };
+
+  return null;
+}
+
+// Detect if user is asking for a specific verse/chapter
+export function isVerseRequest(text) {
+  const lower = text.toLowerCase();
+  const patterns = [
+    /(?:show|tell|give|share|what|read|recite|find|look|search|get)\s+.*(?:chapter|verse|shloka)/i,
+    /(?:chapter|ch)\.?\s*\d+/i,
+    /(?:verse|v\.?|shloka)\s*\d+/i,
+    /\d{1,2}[.:\-]\d{1,3}/,
+    /(?:verse|v\.?)\s*\d+\s+(?:of|from|in)\s+(?:chapter\s+)?\d+/i,
+  ];
+  return patterns.some(p => p.test(text));
+}
+
+// Detect if user is asking for all verses in a chapter
+export function isChapterRequest(text) {
+  const lower = text.toLowerCase();
+  return /(?:all\s+)?(?:verses?\s+(?:of|in|from)\s+)?(?:chapter|ch)\.?\s*\d+/.test(lower) &&
+    !/verse|v\.?|shloka|\.|:|-/.test(lower.replace(/chapter|ch/gi, ''));
+}
+
+// ==================== EMOTION DETECTION ====================
+
 export function detectEmotions(text) {
   const lower = text.toLowerCase().replace(/[^\w\s]/g, ' ');
   const words = lower.split(/\s+/);
@@ -470,7 +730,6 @@ export function detectEmotions(text) {
     dharma: ['dharma', 'duty', 'purpose', 'meaning', 'calling', 'why am i here', 'what should i do', 'career', 'job', 'work'],
     hope: ['hope', 'inspiration', 'inspired', 'motivated', 'motivation', 'encourage', 'encouraged', 'uplifted'],
     wisdom: ['wisdom', 'knowledge', 'understand', 'learn', 'teach', 'advice', 'guidance', 'enlighten'],
-    death: ['death', 'dying', 'mortality', 'funeral', 'passed', 'gone', 'end of life', 'afterlife'],
     divine: ['god', 'krishna', 'rama', 'shiva', 'divine', 'spiritual', 'temple', 'prayer', 'worship', 'pray'],
     desire: ['desire', 'want', 'craving', 'attachment', 'lust', 'greed', 'passion', 'longing', 'yearn'],
     balance: ['balance', 'equilibrium', 'harmony', 'centered', 'grounded', 'stable', 'equanimity'],
@@ -488,7 +747,6 @@ export function detectEmotions(text) {
     }
   }
 
-  // If no emotion detected, default to general help
   if (detected.length === 0) {
     detected.push('dharma', 'wisdom');
   }
@@ -497,7 +755,6 @@ export function detectEmotions(text) {
 }
 
 export function findBestVerse(emotions) {
-  // Score each verse based on emotion overlap
   let bestMatch = null;
   let bestScore = 0;
   const matchedVerses = [];
@@ -516,7 +773,6 @@ export function findBestVerse(emotions) {
     }
   }
 
-  // If multiple verses match, pick a random one from the top matches for variety
   if (matchedVerses.length > 1) {
     matchedVerses.sort((a, b) => b.score - a.score);
     const topScore = matchedVerses[0].score;
