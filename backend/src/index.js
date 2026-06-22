@@ -130,7 +130,7 @@ app.get('/api/search', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, sessionId = 'default' } = req.body;
+    const { message, sessionId = 'default', lang = 'en' } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
     }
@@ -140,7 +140,7 @@ app.post('/api/chat', async (req, res) => {
     }
     const history = chatSessions.get(sessionId);
 
-    const response = await generateResponse(message, history);
+    const response = await generateResponse(message, history, lang);
 
     history.push({ role: 'user', content: message });
     history.push({ role: 'assistant', content: response.message });

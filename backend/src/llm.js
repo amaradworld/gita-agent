@@ -10,6 +10,13 @@ import {
   gitaVerses
 } from './gita.js';
 
+import {
+  detectLanguage,
+  getTranslatedVerse,
+  langPrompts,
+  langDisplayNames,
+} from './translations.js';
+
 const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
 const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
 
@@ -74,7 +81,9 @@ async function callGemini(messages) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-export async function generateResponse(userMessage, chatHistory = []) {
+export async function generateResponse(userMessage, chatHistory = [], lang = 'en') {
+  // Detect language from user text if not explicitly provided
+  const userLang = lang || detectLanguage(userMessage) || 'en';
   const emotions = detectEmotions(userMessage);
   const verse = findBestVerse(emotions);
 
@@ -87,25 +96,30 @@ export async function generateResponse(userMessage, chatHistory = []) {
       const specificVerse = findVerseByChapterVerse(parsed.chapter, parsed.verse);
       if (specificVerse) {
         const chapterInfo = chapterNames[parsed.chapter] || {};
+        const translated = getTranslatedVerse(specificVerse, userLang);
         return buildVerseResponse(
           `You asked for Chapter ${parsed.chapter}, Verse ${parsed.verse} — ${chapterInfo.english || ''} (${chapterInfo.subtitle || ''}). Here it is:`,
-          specificVerse,
-          []
+          translated,
+          [],
+          userLang
         );
       } else {
         // Verse not in our database — search nearby verses
         const chapterVerses = findVersesByChapter(parsed.chapter);
         if (chapterVerses.length > 0) {
+          const translated = getTranslatedVerse(chapterVerses[0], userLang);
           return buildVerseResponse(
             `I don't have Verse ${parsed.verse} of Chapter ${parsed.chapter} in my collection, but here is a verse from that chapter that may help:`,
-            chapterVerses[0],
-            []
+            translated,
+            [],
+            userLang
           );
         }
         return {
           message: `I don't have Chapter ${parsed.chapter}, Verse ${parsed.verse} in my collection. The Bhagavad Gita has 700 verses across 18 chapters. My collection covers the most important verses. Try asking about a specific topic, and I'll find the best verse for you.`,
           verse: { chapter: parsed.chapter, verse: parsed.verse, sanskrit: '', translation: 'Verse not in collection', explanation: '', advice: '' },
           emotions,
+          lang: userLang,
         };
       }
     }
@@ -115,34 +129,37 @@ export async function generateResponse(userMessage, chatHistory = []) {
       const chapterVerses = findVersesByChapter(parsed.chapter);
       const chapterInfo = chapterNames[parsed.chapter] || {};
       if (chapterVerses.length > 0) {
-        // Return first verse of the chapter
+        const translated = getTranslatedVerse(chapterVerses[0], userLang);
         return buildVerseResponse(
           `Here is Chapter ${parsed.chapter} — ${chapterInfo.english || ''} (${chapterInfo.subtitle || ''}). This chapter has ${chapterVerses.length} verse(s) in my collection. Here is the first one:`,
-          chapterVerses[0],
-          chapterVerses.slice(1) // additional verses for context
+          translated,
+          chapterVerses.slice(1).map(v => getTranslatedVerse(v, userLang)),
+          userLang
         );
       }
       return {
         message: `I don't have Chapter ${parsed.chapter} in my collection yet. The chapter is called "${chapterInfo.english || 'Unknown'}" (${chapterInfo.subtitle || ''}). Try asking about a topic, and I'll find the best verse from the Gita for you.`,
         verse: { chapter: parsed.chapter, verse: 1, sanskrit: '', translation: 'Chapter not yet in collection', explanation: '', advice: '' },
         emotions,
+        lang: userLang,
       };
     }
   }
 
   // Regular emotional query — use emotion-based verse matching
+  const translated = getTranslatedVerse(verse, userLang);
   const verseContext = `
 RELEVANT GITA VERSE:
-Chapter ${verse.chapter}, Verse ${verse.verse}
-Sanskrit: ${verse.sanskrit}
-Translation: "${verse.translation}"
-Explanation: ${verse.explanation}
-Related Advice: ${verse.advice}
+Chapter ${translated.chapter}, Verse ${translated.verse}
+Sanskrit: ${translated.sanskrit}
+Translation: "${translated.translation}"
+Explanation: ${translated.explanation}
+Related Advice: ${translated.advice}
 
 Detected emotions: ${emotions.join(', ')}`;
 
   const messages = [
-    { role: 'system', content: SYSTEM_PROMPT + '\n\n' + verseContext },
+    { role: 'system', content: SYSTEM_PROMPT + (langPrompts[userLang] || '') + '\n\n' + verseContext },
     ...chatHistory.slice(-6),
     { role: 'user', content: userMessage },
   ];
@@ -154,23 +171,24 @@ Detected emotions: ${emotions.join(', ')}`;
   } else if (GEMINI_KEY) {
     aiResponse = await callGemini(messages);
   } else {
-    aiResponse = generateFallbackResponse(userMessage, emotions, verse);
+    aiResponse = generateFallbackResponse(userMessage, emotions, translated, userLang);
   }
 
   return {
     message: aiResponse,
     verse: {
-      chapter: verse.chapter,
-      verse: verse.verse,
-      sanskrit: verse.sanskrit,
-      translation: verse.translation,
-      explanation: verse.explanation,
+      chapter: translated.chapter,
+      verse: translated.verse,
+      sanskrit: translated.sanskrit,
+      translation: translated.translation,
+      explanation: translated.explanation,
     },
     emotions,
+    lang: userLang,
   };
 }
 
-function buildVerseResponse(opener, verse, additionalVerses = []) {
+function buildVerseResponse(opener, verse, additionalVerses = [], lang = 'en') {
   let message = `${opener}
 
 **Chapter ${verse.chapter}, Verse ${verse.verse}**
@@ -199,10 +217,11 @@ ${verse.advice}`;
       explanation: verse.explanation,
     },
     emotions: [],
+    lang,
   };
 }
 
-function generateFallbackResponse(userMessage, emotions, verse) {
+function generateFallbackResponse(userMessage, emotions, verse, lang = 'en') {
   const openers = {
     anxiety: [
       `I feel you. Anxiety can be overwhelming, but you are not alone in this.`,

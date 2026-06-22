@@ -1,7 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 const API = '';
+
+const LANGUAGES = [
+  { code: 'en', label: 'English', native: 'English' },
+  { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
+  { code: 'ta', label: 'Tamil', native: 'தமிழ்' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు' },
+  { code: 'mr', label: 'Marathi', native: 'मराठी' },
+  { code: 'bn', label: 'Bengali', native: 'বাংলা' },
+  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ' },
+  { code: 'gu', label: 'Gujarati', native: 'ગુજરાતી' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം' },
+];
 
 const CHAPTER_NAMES = {
   1: { english: 'Arjuna Vishada Yoga', subtitle: 'Yoga of Arjuna\'s Dejection' },
@@ -25,6 +38,7 @@ const CHAPTER_NAMES = {
 };
 
 function VerseCard({ verse }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   if (!verse) return null;
 
@@ -42,12 +56,13 @@ function VerseCard({ verse }) {
           <p className="text-gray-300 text-sm leading-relaxed">{verse.explanation}</p>
         </div>
       )}
-      <p className="text-saffron-400 text-xs mt-2">{expanded ? 'Click to collapse' : 'Click to read more'}</p>
+      <p className="text-saffron-400 text-xs mt-2">{expanded ? t('chapterBrowser.collapse') : t('chapterBrowser.readMore')}</p>
     </div>
   );
 }
 
 function ChapterBrowser({ onSelectVerse, onClose }) {
+  const { t } = useTranslation();
   const [chapters, setChapters] = useState([]);
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [chapterVerses, setChapterVerses] = useState([]);
@@ -80,8 +95,8 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div>
-            <h2 className="text-saffron-100 font-bold text-lg">Bhagavad Gita</h2>
-            <p className="text-gray-400 text-xs">18 Chapters · 700+ Verses</p>
+            <h2 className="text-saffron-100 font-bold text-lg">{t('chapterBrowser.title')}</h2>
+            <p className="text-gray-400 text-xs">{t('chapterBrowser.chapters')} · {t('chapterBrowser.verses')}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -104,7 +119,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
                       <h3 className="text-saffron-100 text-sm font-medium mt-0.5">{ch.english}</h3>
                       <p className="text-gray-500 text-xs">{ch.subtitle}</p>
                     </div>
-                    <span className="text-gray-600 text-xs">{ch.verseCount} verses →</span>
+                    <span className="text-gray-600 text-xs">{t('chapterBrowser.verseCount', { count: ch.verseCount })} →</span>
                   </div>
                 </button>
               ))}
@@ -115,7 +130,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
                 onClick={() => setSelectedChapter(null)}
                 className="text-saffron-400 text-xs hover:text-saffron-300 mb-3 flex items-center gap-1"
               >
-                ← Back to chapters
+                {t('chapterBrowser.backToChapters')}
               </button>
               <h3 className="text-saffron-100 font-bold mb-1">
                 Chapter {selectedChapter} — {CHAPTER_NAMES[selectedChapter]?.english}
@@ -123,9 +138,9 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
               <p className="text-gray-500 text-xs mb-4">{CHAPTER_NAMES[selectedChapter]?.subtitle}</p>
 
               {loading ? (
-                <div className="text-center text-gray-500 py-8">Loading verses...</div>
+                <div className="text-center text-gray-500 py-8">{t('chapterBrowser.loadingVerses')}</div>
               ) : chapterVerses.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">No verses available for this chapter yet.</div>
+                <div className="text-center text-gray-500 py-8">{t('chapterBrowser.noVerses')}</div>
               ) : (
                 <div className="space-y-3">
                   {chapterVerses.map(v => (
@@ -158,7 +173,7 @@ function VoiceButton({ isListening, onToggle }) {
           ? 'bg-red-500 hover:bg-red-600 voice-pulse'
           : 'bg-saffron-600 hover:bg-saffron-700'
       }`}
-      title={isListening ? 'Stop listening' : 'Start voice input'}
+      title={isListening ? t('chat.stop') : t('chat.listen')}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
@@ -179,11 +194,57 @@ function TypingIndicator() {
   );
 }
 
+function LanguageSelector() {
+  const { i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+
+  const changeLang = (code) => {
+    i18n.changeLanguage(code);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-gray-400 hover:text-saffron-400 px-2 py-1 rounded-lg hover:bg-white/5 transition-colors text-xs flex items-center gap-1"
+        title="Change language"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        {currentLang.native}
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-1 bg-gray-900 border border-white/10 rounded-xl shadow-xl py-1 z-50 w-40">
+          {LANGUAGES.map(lang => (
+            <button
+              key={lang.code}
+              onClick={() => changeLang(lang.code)}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
+                i18n.language === lang.code ? 'text-saffron-400 bg-saffron-600/10' : 'text-gray-300'
+              }`}
+            >
+              <span className="font-medium">{lang.native}</span>
+              <span className="text-gray-500 text-xs ml-1">({lang.label})</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Namaste! I am your Gita Gyan guide. Share what is on your heart, and I will offer wisdom from the Bhagavad Gita to help you find peace and clarity.\n\nYou can type or use the microphone to speak.',
+      content: t('chat.welcome'),
       verse: null,
     },
   ]);
@@ -230,11 +291,11 @@ export default function App() {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
       if (event.error === 'not-allowed') {
-        toast.error('Microphone access denied. Please allow microphone in browser settings.');
+        toast.error(t('chat.micDenied'));
       } else if (event.error === 'no-speech') {
-        toast.error('No speech detected. Please try again.');
+        toast.error(t('chat.noSpeech'));
       } else if (event.error !== 'aborted') {
-        toast.error('Voice recognition failed. Please try again.');
+        toast.error(t('chat.voiceFailed'));
       }
     };
 
@@ -248,9 +309,9 @@ export default function App() {
   const toggleVoice = () => {
     if (!recognitionRef.current) {
       if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        toast.error('Voice requires HTTPS. Please use HTTPS or localhost.');
+        toast.error(t('chat.voiceHttpsRequired'));
       } else {
-        toast.error('Voice recognition not supported in this browser. Try Chrome or Edge.');
+        toast.error(t('chat.voiceNotSupported'));
       }
       return;
     }
@@ -261,7 +322,7 @@ export default function App() {
       try {
         recognitionRef.current.start();
         setIsListening(true);
-        toast.success('Listening... Speak now', { duration: 2000 });
+        toast.success(t('chat.listening'), { duration: 2000 });
       } catch (err) {
         console.error('Failed to start recognition:', err);
         toast.error('Could not start voice. Please try again.');
@@ -271,7 +332,7 @@ export default function App() {
 
   const speak = (text, id) => {
     if (!('speechSynthesis' in window)) {
-      toast.error('Text-to-speech not supported in this browser');
+      toast.error(t('chat.ttsNotSupported'));
       return;
     }
 
@@ -324,7 +385,7 @@ export default function App() {
       const res = await fetch(`${API}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg }),
+        body: JSON.stringify({ message: msg, lang: i18n.language }),
       });
       const data = await res.json();
 
@@ -333,10 +394,10 @@ export default function App() {
         { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions },
       ]);
     } catch (err) {
-      toast.error('Failed to connect. Please try again.');
+      toast.error(t('chat.connectionError'));
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: 'I apologize, something went wrong. Please try again. The divine light is always with you.', verse: null },
+        { role: 'assistant', content: t('chat.genericError'), verse: null },
       ]);
     } finally {
       setLoading(false);
@@ -365,17 +426,20 @@ export default function App() {
             </div>
           </div>
           <div className="text-xs text-gray-500 hidden sm:block">Bhagavad Gita Wisdom</div>
-          <button
-            onClick={() => setShowChapterBrowser(true)}
-            className="text-gray-400 hover:text-saffron-400 p-2 rounded-lg hover:bg-white/5 transition-colors"
-            title="Browse all chapters"
-          >
+          <div className="flex items-center gap-1">
+            <LanguageSelector />
+            <button
+              onClick={() => setShowChapterBrowser(true)}
+              className="text-gray-400 hover:text-saffron-400 p-2 rounded-lg hover:bg-white/5 transition-colors"
+              title="Browse all chapters"
+            >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
               <path d="M8 7h6"/>
               <path d="M8 11h8"/>
             </svg>
-          </button>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -417,7 +481,7 @@ export default function App() {
                         </>
                       )}
                     </svg>
-                    {speakingId === i ? 'Stop' : 'Listen'}
+                    {speakingId === i ? t('chat.stop') : t('chat.listen')}
                   </button>
                 )}
               </div>
@@ -445,7 +509,7 @@ export default function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Share what's on your heart..."
+              placeholder={t('chat.placeholder')}
               rows={1}
               className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-saffron-500/50 focus:border-saffron-500/50"
               style={{ minHeight: '44px', maxHeight: '120px' }}
@@ -466,7 +530,7 @@ export default function App() {
             </svg>
           </button>
         </div>
-        <p className="text-center text-[10px] text-gray-600 mt-2">Powered by Bhagavad Gita wisdom</p>
+        <p className="text-center text-[10px] text-gray-600 mt-2">{t('chat.poweredBy')}</p>
       </footer>
 
       {showChapterBrowser && (
