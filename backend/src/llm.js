@@ -223,54 +223,95 @@ ${verse.advice}`;
 
 function generateFallbackResponse(userMessage, emotions, verse, lang = 'en') {
   const openers = {
-    anxiety: [
-      `I feel you. Anxiety can be overwhelming, but you are not alone in this.`,
-      `Your anxiety is valid. Let me share some wisdom that has calmed millions of hearts.`,
-      `I hear the worry in your words. Krishna has something beautiful to say about this.`,
-    ],
-    sadness: [
-      `I can feel the weight of your sadness. Please know — it's okay to cry.`,
-      `Your sadness is real, and I won't minimize it. But let me offer you some Gita wisdom.`,
-      `Pain like yours needs to be felt, not avoided. Here is what the Gita teaches.`,
-    ],
-    anger: [
-      `I understand that fire inside you. Anger is powerful, but it can burn you.`,
-      `Your anger makes sense. But Krishna warns us about letting it cloud our wisdom.`,
-      `Frustration is a sign you care deeply. Here's how to channel it wisely.`,
-    ],
-    loneliness: [
-      `You feel alone, but I want you to know — the divine is always with you.`,
-      `Loneliness can feel like the whole world has forgotten you. But you are never truly alone.`,
-      `Even in your darkest moment of isolation, the universe holds you.`,
-    ],
-    confusion: [
-      `Feeling lost is not a sign of weakness — it means you are seeking truth.`,
-      `Even Arjuna was confused in the battlefield. Krishna's advice applies to you too.`,
-      `Confusion is the doorway to clarity. Let me guide you through it.`,
-    ],
-    fear: [
-      `Fear is natural, but it doesn't have to control you.`,
-      `I sense your fear. Krishna has a powerful message about facing our deepest fears.`,
-      `Even the bravest warriors feel fear. What matters is how we respond to it.`,
-    ],
-    love: [
-      `What a beautiful heart you have. Love is the highest form of worship.`,
-      `Your capacity to love is sacred. The Gita celebrates this.`,
-      `Love is the language of the divine. Let me share what Krishna says about it.`,
-    ],
-    default: [
-      `Thank you for sharing with me. Let me offer you some timeless wisdom.`,
-      `I hear you. Here is what the Bhagavad Gita teaches about this.`,
-      `Your words carry deep meaning. Let me share a verse that speaks to your heart.`,
-    ],
+    en: {
+      anxiety: [
+        `I feel you. Anxiety can be overwhelming, but you are not alone in this.`,
+        `Your anxiety is valid. Let me share some wisdom that has calmed millions of hearts.`,
+        `I hear the worry in your words. Krishna has something beautiful to say about this.`,
+      ],
+      sadness: [
+        `I can feel the weight of your sadness. Please know — it's okay to cry.`,
+        `Your sadness is real, and I won't minimize it. But let me offer you some Gita wisdom.`,
+        `Pain like yours needs to be felt, not avoided. Here is what the Gita teaches.`,
+      ],
+      anger: [
+        `I understand that fire inside you. Anger is powerful, but it can burn you.`,
+        `Your anger makes sense. But Krishna warns us about letting it cloud our wisdom.`,
+        `Frustration is a sign you care deeply. Here's how to channel it wisely.`,
+      ],
+      loneliness: [
+        `You feel alone, but I want you to know — the divine is always with you.`,
+        `Loneliness can feel like the whole world has forgotten you. But you are never truly alone.`,
+        `Even in your darkest moment of isolation, the universe holds you.`,
+      ],
+      confusion: [
+        `Feeling lost is not a sign of weakness — it means you are seeking truth.`,
+        `Even Arjuna was confused in the battlefield. Krishna's advice applies to you too.`,
+        `Confusion is the doorway to clarity. Let me guide you through it.`,
+      ],
+      fear: [
+        `Fear is natural, but it doesn't have to control you.`,
+        `I sense your fear. Krishna has a powerful message about facing our deepest fears.`,
+        `Even the bravest warriors feel fear. What matters is how we respond to it.`,
+      ],
+      love: [
+        `What a beautiful heart you have. Love is the highest form of worship.`,
+        `Your capacity to love is sacred. The Gita celebrates this.`,
+        `Love is the language of the divine. Let me share what Krishna says about it.`,
+      ],
+      default: [
+        `Thank you for sharing with me. Let me offer you some timeless wisdom.`,
+        `I hear you. Here is what the Bhagavad Gita teaches about this.`,
+        `Your words carry deep meaning. Let me share a verse that speaks to your heart.`,
+      ],
+    },
+    hi: {
+      anxiety: [
+        'मैं समझ सकता हूं। चिंता बहुत भारी हो सकती है, लेकिन आप अकेले नहीं हैं।',
+        'आपकी चिंता जायज है। मैं गीता का एक ज्ञान साझा करता हूं।',
+      ],
+      sadness: [
+        'मैं आपके दुःख का भार महसूस कर सकता हूं। कृपया जानें — रोना ठीक है।',
+        'आपका दुःख सच्चा है। मैं इसे हल्के में नहीं लूंगा। गीता का ज्ञान सुनिए।',
+      ],
+      anger: [
+        'मैं आपके अंदर की आग समझ सकता हूं। क्रोध शक्तिशाली है, लेकिन जला सकता है।',
+        'आपका गुस्सा समझ में आता है। लेकिन कृष्ण चेतावनी देते हैं कि क्रोध बुद्धि को नष्ट करता है।',
+      ],
+      loneliness: [
+        'आप अकेला महसूस करते हैं, लेकिन मैं बताना चाहता हूं — दिव्य शक्ति हमेशा आपके साथ है।',
+        'अकेलापन ऐसा लगता है जैसे दुनिया ने भुला दिया। लेकिन आप कभी सच में अकेले नहीं हैं।',
+      ],
+      confusion: [
+        'खोया हुआ महसूस करना कमजोरी का संकेत नहीं है — इसका मतलब है कि आप सत्य की खोज कर रहे हैं।',
+        'अर्जुन भी युद्ध में भ्रमित थे। कृष्ण की सलाह आप पर भी लागू होती है।',
+      ],
+      fear: [
+        'भय स्वाभाविक है, लेकिन इसे आप पर शासन नहीं करने देना चाहिए।',
+        'मैं आपका भय महसूस कर सकता हूं। कृष्ण के पास इसके बारे में एक शक्तिशाली संदेश है।',
+      ],
+      love: [
+        'आपका दिल कितना सुंदर है। प्रेम पूजा का सर्वोच्च रूप है।',
+        'प्रेम करने की आपकी क्षमता पवित्र है। गीता इसका जश्न मनाती है।',
+      ],
+      default: [
+        'आपके साथ साझा करने के लिए धन्यवाद। मैं गीता का एक शाश्वत ज्ञान देता हूं।',
+        'मैं सुन रहा हूं। भगवद्गीता इस बारे में यह सिखाती है।',
+        'आपके शब्दों में गहरा अर्थ है। मैं एक ऐसा श्लोक साझा करता हूं जो आपके दिल से बात करता है।',
+      ],
+    },
   };
 
-  const openerList = openers[emotions[0]] || openers.default;
+  const langOpeners = openers[lang] || openers.en;
+  const openerList = langOpeners[emotions[0]] || langOpeners.default;
   const opener = openerList[Math.floor(Math.random() * openerList.length)];
+
+  const chapterLabel = lang === 'hi' ? 'अध्याय' : 'Chapter';
+  const verseLabel = lang === 'hi' ? 'श्लोक' : 'Verse';
 
   return `${opener}
 
-From the Bhagavad Gita, Chapter ${verse.chapter}, Verse ${verse.verse}:
+${lang === 'hi' ? 'भगवद्गीता' : 'From the Bhagavad Gita'}, ${chapterLabel} ${verse.chapter}, ${verseLabel} ${verse.verse}:
 "${verse.translation}"
 
 ${verse.explanation}
