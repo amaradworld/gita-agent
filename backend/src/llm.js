@@ -109,44 +109,60 @@ Detected emotions: ${emotions.join(', ')}
 }
 
 function generateFallbackResponse(userMessage, emotions, verse) {
-  const responses = {
-    anxiety: `I hear you, and your feelings are completely valid. Anxiety can feel overwhelming, but remember what Lord Krishna says in Chapter ${verse.chapter}, Verse ${verse.verse}:
+  const chapterText = verse.chapter <= 9 ? thisChapterNames[verse.chapter - 1] : otherChapterNames[verse.chapter - 10] || '';
 
-"${verse.translation}"
-
-${verse.explanation}
-
-${verse.advice}`,
-    sadness: `Your pain is real, and I want you to know that it's okay to feel this way. The Bhagavad Gita teaches us in Chapter ${verse.chapter}, Verse ${verse.verse}:
-
-"${verse.translation}"
-
-${verse.explanation}
-
-${verse.advice}`,
-    anger: `I understand your frustration. Anger is a powerful emotion, but it can cloud our wisdom. Krishna teaches in Chapter ${verse.chapter}, Verse ${verse.verse}:
-
-"${verse.translation}"
-
-${verse.explanation}
-
-${verse.advice}`,
-    loneliness: `You are not alone, even when it feels that way. The Gita reminds us in Chapter ${verse.chapter}, Verse ${verse.verse}:
-
-"${verse.translation}"
-
-${verse.explanation}
-
-${verse.advice}`,
-    default: `Thank you for sharing with me. Let me offer you some wisdom from the Bhagavad Gita, Chapter ${verse.chapter}, Verse ${verse.verse}:
-
-"${verse.translation}"
-
-${verse.explanation}
-
-${verse.advice}`,
+  const openers = {
+    anxiety: [
+      `I feel you. Anxiety can be overwhelming, but you are not alone in this.`,
+      `Your anxiety is valid. Let me share some wisdom that has calmed millions of hearts.`,
+      `I hear the worry in your words. Krishna has something beautiful to say about this.`,
+    ],
+    sadness: [
+      `I can feel the weight of your sadness. Please know — it's okay to cry.`,
+      `Your sadness is real, and I won't minimize it. But let me offer you some Gita wisdom.`,
+      `Pain like yours needs to be felt, not avoided. Here is what the Gita teaches.`,
+    ],
+    anger: [
+      `I understand that fire inside you. Anger is powerful, but it can burn you.`,
+      `Your anger makes sense. But Krishna warns us about letting it cloud our wisdom.`,
+      `Frustration is a sign you care deeply. Here's how to channel it wisely.`,
+    ],
+    loneliness: [
+      `You feel alone, but I want you to know — the divine is always with you.`,
+      `Loneliness can feel like the whole world has forgotten you. But you are never truly alone.`,
+      `Even in your darkest moment of isolation, the universe holds you.`,
+    ],
+    confusion: [
+      `Feeling lost is not a sign of weakness — it means you are seeking truth.`,
+      `Even Arjuna was confused in the battlefield. Krishna's advice applies to you too.`,
+      `Confusion is the doorway to clarity. Let me guide you through it.`,
+    ],
+    fear: [
+      `Fear is natural, but it doesn't have to control you.`,
+      `I sense your fear. Krishna has a powerful message about facing our deepest fears.`,
+      `Even the bravest warriors feel fear. What matters is how we respond to it.`,
+    ],
+    love: [
+      `What a beautiful heart you have. Love is the highest form of worship.`,
+      `Your capacity to love is sacred. The Gita celebrates this.`,
+      `Love is the language of the divine. Let me share what Krishna says about it.`,
+    ],
+    default: [
+      `Thank you for sharing with me. Let me offer you some timeless wisdom.`,
+      `I hear you. Here is what the Bhagavad Gita teaches about this.`,
+      `Your words carry deep meaning. Let me share a verse that speaks to your heart.`,
+    ],
   };
 
-  const primaryEmotion = emotions[0] || 'default';
-  return responses[primaryEmotion] || responses.default;
+  const openerList = openers[emotions[0]] || openers.default;
+  const opener = openerList[Math.floor(Math.random() * openerList.length)];
+
+  return `${opener}
+
+From the Bhagavad Gita, Chapter ${verse.chapter}, Verse ${verse.verse}:
+"${verse.translation}"
+
+${verse.explanation}
+
+${verse.advice}`;
 }
