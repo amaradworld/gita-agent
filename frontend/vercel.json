@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://gita-agent.onrender.com/api/$1" }
+  ]
+}
