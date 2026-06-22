@@ -108,17 +108,22 @@ app.get('/api/verses/:verseNum', (req, res) => {
 
 // GET /api/search?q=keyword — search verses by text
 app.get('/api/search', (req, res) => {
-  const q = (req.query.q || '').toLowerCase();
-  if (!q.trim()) {
-    return res.status(400).json({ error: 'Query parameter "q" is required' });
+  try {
+    const q = String(req.query.q || '').toLowerCase();
+    if (!q.trim()) {
+      return res.status(400).json({ error: 'Query parameter "q" is required' });
+    }
+    const results = gitaVerses.filter(v =>
+      v.translation.toLowerCase().includes(q) ||
+      v.explanation.toLowerCase().includes(q) ||
+      v.advice.toLowerCase().includes(q) ||
+      v.emotions.some(e => e.toLowerCase().includes(q))
+    );
+    res.json({ query: q, total: results.length, verses: results });
+  } catch (err) {
+    logger.error({ err }, 'Search error');
+    res.status(500).json({ error: 'Search failed' });
   }
-  const results = gitaVerses.filter(v =>
-    v.translation.toLowerCase().includes(q) ||
-    v.explanation.toLowerCase().includes(q) ||
-    v.advice.toLowerCase().includes(q) ||
-    v.emotions.some(e => e.toLowerCase().includes(q))
-  );
-  res.json({ query: q, total: results.length, verses: results });
 });
 
 // ==================== CHAT ====================
