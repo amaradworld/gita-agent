@@ -71,65 +71,120 @@ export default function App() {
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
 
+  // Preload voices (browsers load lazily)
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   // Initialize speech recognition
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-IN';
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
 
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(prev => prev + transcript);
-        setIsListening(false);
-      };
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN';
+    recognition.maxAlternatives = 1;
 
-      recognitionRef.current.onerror = () => {
-        setIsListening(false);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(prev => prev ? prev + ' ' + transcript : transcript);
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+      if (event.error === 'not-allowed') {
+        toast.error('Microphone access denied. Please allow microphone in browser settings.');
+      } else if (event.error === 'no-speech') {
+        toast.error('No speech detected. Please try again.');
+      } else if (event.error !== 'aborted') {
         toast.error('Voice recognition failed. Please try again.');
-      };
+      }
+    };
 
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
   }, []);
 
   const toggleVoice = () => {
     if (!recognitionRef.current) {
-      toast.error('Voice recognition not supported in this browser');
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        toast.error('Voice requires HTTPS. Please use HTTPS or localhost.');
+      } else {
+        toast.error('Voice recognition not supported in this browser. Try Chrome or Edge.');
+      }
       return;
     }
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      recognitionRef.current.start();
-      setIsListening(true);
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        toast.success('Listening... Speak now', { duration: 2000 });
+      } catch (err) {
+        console.error('Failed to start recognition:', err);
+        toast.error('Could not start voice. Please try again.');
+      }
     }
   };
 
   const speak = (text, id) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      if (speakingId === id) {
-        setSpeakingId(null);
-        return;
-      }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-IN';
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.onend = () => setSpeakingId(null);
-      setSpeakingId(id);
-      window.speechSynthesis.speak(utterance);
+    if (!('speechSynthesis' in window)) {
+      toast.error('Text-to-speech not supported in this browser');
+      return;
     }
+
+    window.speechSynthesis.cancel();
+    if (speakingId === id) {
+      setSpeakingId(null);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-IN';
+    utterance.rate = 0.85;
+    utterance.pitch = 0.9;
+
+    // Find Indian English male voice
+    const voices = window.speechSynthesis.getVoices();
+    const indianMaleVoice = voices.find(v =>
+      v.lang === 'en-IN' && v.name.toLowerCase().includes('male')
+    ) || voices.find(v =>
+      v.lang === 'en-IN' && (v.name.includes('Ravi') || v.name.includes('Vijay') || v.name.includes('Aditya') || v.name.includes('Google IN'))
+    ) || voices.find(v =>
+      v.lang === 'en-IN'
+    ) || voices.find(v =>
+      v.lang.startsWith('hi') || v.lang.startsWith('en-IN')
+    );
+
+    if (indianMaleVoice) {
+      utterance.voice = indianMaleVoice;
+      console.log('Using voice:', indianMaleVoice.name, indianMaleVoice.lang);
+    } else {
+      console.log('No Indian voice found, using default. Available:', voices.map(v => v.name + '(' + v.lang + ')'));
+    }
+
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+    setSpeakingId(id);
+    window.speechSynthesis.speak(utterance);
   };
 
   const sendMessage = async () => {
