@@ -607,6 +607,7 @@ export const gitaVerses = [
     emotions: ['excellence', 'perfection', 'mastery', 'skill', 'action'],
     sanskrit: 'सिद्धिं प्राप्तो यथा ब्रह्म तथाप्नोति निबोध मे। समासेनैव कौन्तेय निष्ठा ज्ञानस्य या परा॥',
     translation: 'Learn from Me how the perfected soul attains Brahman — the supreme perfection. It is through total absorption in Me.',
+    explanation: 'Perfection is achieved not by many actions, but by total devotion and surrender. The yogi who sees the divine in all action attains the highest state.',
     advice: 'Mastery comes from total absorption. Give yourself fully to what you do, and perfection follows naturally.'
   },
   {
