@@ -797,11 +797,21 @@ const __dirname = dirname(__filename);
 
 let ragChunks = [];
 let ragIndex = [];
+let invertedIndex = new Map(); // word -> Set of chunk indices
 
 try {
   ragChunks = JSON.parse(fs.readFileSync(join(__dirname, '..', 'gita_rag_chunks.json'), 'utf8'));
   ragIndex = JSON.parse(fs.readFileSync(join(__dirname, '..', 'gita_rag_index.json'), 'utf8'));
-  console.log(`[RAG] Loaded ${ragChunks.length} chunks from ISKCON Bhagavad Gita`);
+
+  // Build inverted index at startup for fast lookup
+  ragIndex.forEach((ci, idx) => {
+    for (const word of Object.keys(ci.freq)) {
+      if (!invertedIndex.has(word)) invertedIndex.set(word, new Set());
+      invertedIndex.get(word).add(idx);
+    }
+  });
+
+  console.log(`[RAG] Loaded ${ragChunks.length} chunks, ${invertedIndex.size} unique words`);
 } catch (e) {
   console.warn('[RAG] Could not load chunks:', e.message);
 }
@@ -831,20 +841,22 @@ export function searchGitaBook(query, topK = 3) {
   const queryTokens = tokenizeRag(query);
   if (queryTokens.length === 0) return [];
 
-  const scored = ragIndex.map((ci, idx) => {
-    let score = 0;
-    for (const qt of queryTokens) {
-      if (ci.freq[qt]) score += ci.freq[qt];
-    }
-    return { idx, score };
-  });
+  // Use inverted index to find candidate chunks (much faster than scanning all)
+  const candidateScores = new Map(); // chunkIdx -> score
 
-  return scored
-    .filter(s => s.score > 0)
-    .sort((a, b) => b.score - a.score)
+  for (const qt of queryTokens) {
+    const chunkIds = invertedIndex.get(qt);
+    if (!chunkIds) continue;
+    for (const idx of chunkIds) {
+      candidateScores.set(idx, (candidateScores.get(idx) || 0) + (ragIndex[idx].freq[qt] || 0));
+    }
+  }
+
+  return [...candidateScores.entries()]
+    .sort((a, b) => b[1] - a[1])
     .slice(0, topK)
-    .map(s => ({
-      score: s.score,
-      text: ragChunks[s.idx].slice(0, 1500),
+    .map(([idx, score]) => ({
+      score,
+      text: ragChunks[idx].slice(0, 1500),
     }));
 }

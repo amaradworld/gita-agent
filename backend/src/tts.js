@@ -1,5 +1,6 @@
 import https from 'https';
 import express from 'express';
+import { createHash } from 'crypto';
 
 const router = express.Router();
 
@@ -8,7 +9,31 @@ const LANG_MAP = {
   'mr': 'mr', 'bn': 'bn', 'kn': 'kn', 'gu': 'gu', 'ml': 'ml',
 };
 
-// Validate redirect stays on google domains
+// TTS Audio Cache — avoids re-fetching same text from Google
+const ttsCache = new Map();
+const CACHE_MAX = 200;
+const CACHE_TTL = 3600000; // 1 hour
+
+function cacheKey(text, lang) {
+  return createHash('md5').update(`${lang}:${text}`).digest('hex');
+}
+
+function getCached(key) {
+  const entry = ttsCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.time > CACHE_TTL) { ttsCache.delete(key); return null; }
+  return entry.data;
+}
+
+function setCache(key, data) {
+  if (ttsCache.size >= CACHE_MAX) {
+    // Delete oldest entry
+    const firstKey = ttsCache.keys().next().value;
+    ttsCache.delete(firstKey);
+  }
+  ttsCache.set(key, { data, time: Date.now() });
+}
+
 function isGoogleRedirect(url) {
   try {
     const parsed = new URL(url);
@@ -27,24 +52,18 @@ function fetchGoogleTTS(text, lang) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Referer': 'https://translate.google.com/',
       },
-      timeout: 15000,
+      timeout: 10000,
     }, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
         const redirectUrl = res.headers.location;
-        if (!isGoogleRedirect(redirectUrl)) {
-          return reject(new Error('Invalid redirect target'));
-        }
-        https.get(redirectUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 }, (res2) => {
+        if (!isGoogleRedirect(redirectUrl)) return reject(new Error('Invalid redirect'));
+        https.get(redirectUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 10000 }, (res2) => {
           const chunks = [];
           res2.on('data', (c) => chunks.push(c));
           res2.on('end', () => {
             const buf = Buffer.concat(chunks);
-            // Validate actual audio content, not just byte count
-            if (res2.headers['content-type']?.includes('audio') || (buf.length > 500 && buf[0] === 0xff)) {
-              resolve(buf);
-            } else {
-              reject(new Error('Response is not audio'));
-            }
+            if (buf.length > 500 && buf[0] === 0xff) resolve(buf);
+            else reject(new Error('Not audio'));
           });
           res2.on('error', reject);
         }).on('error', reject);
@@ -54,22 +73,16 @@ function fetchGoogleTTS(text, lang) {
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
         const buf = Buffer.concat(chunks);
-        if (res.headers['content-type']?.includes('audio') || (buf.length > 500 && buf[0] === 0xff)) {
-          resolve(buf);
-        } else {
-          reject(new Error('Response is not audio'));
-        }
+        if (buf.length > 500 && buf[0] === 0xff) resolve(buf);
+        else reject(new Error('Not audio'));
       });
       res.on('error', reject);
     }).on('error', reject);
   });
 }
 
-// Split text into sentences — supports Indian language punctuation (।)
 function splitSentences(text) {
-  // Split on period, !, ?, and Devanagari danda (।)
-  const parts = text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text];
-  return parts.filter(s => s.trim().length > 0);
+  return (text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text]).filter(s => s.trim().length > 0);
 }
 
 router.post('/', async (req, res) => {
@@ -80,18 +93,26 @@ router.post('/', async (req, res) => {
     }
 
     const safeText = text.replace(/[*_`#]/g, '').slice(0, 2000);
+
+    // Check cache first
+    const key = cacheKey(safeText, lang);
+    const cached = getCached(key);
+    if (cached) {
+      res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': cached.length.toString(), 'X-Cache': 'HIT' });
+      return res.send(cached);
+    }
+
     const sentences = splitSentences(safeText);
     const audioChunks = [];
 
-    for (const sentence of sentences) {
-      const trimmed = sentence.trim();
-      if (trimmed.length > 0) {
-        try {
-          const audio = await fetchGoogleTTS(trimmed, lang);
-          audioChunks.push(audio);
-        } catch (e) {
-          console.error('TTS chunk failed:', e.message);
-        }
+    // Fetch all sentences in parallel for speed
+    const results = await Promise.allSettled(
+      sentences.map(s => fetchGoogleTTS(s.trim(), lang))
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.length > 500) {
+        audioChunks.push(result.value);
       }
     }
 
@@ -100,10 +121,12 @@ router.post('/', async (req, res) => {
     }
 
     const combined = Buffer.concat(audioChunks);
+    setCache(key, combined);
+
     res.set({
       'Content-Type': 'audio/mpeg',
       'Content-Length': combined.length.toString(),
-      'Cache-Control': 'public, max-age=3600',
+      'X-Cache': 'MISS',
     });
     res.send(combined);
   } catch (err) {
