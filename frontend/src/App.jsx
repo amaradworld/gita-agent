@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import SpeakingButton from './components/SpeakingButton';
 
 const API = '';
 
@@ -37,17 +38,31 @@ const CHAPTER_NAMES = {
   18: { english: 'Moksha Sannyasa Yoga', subtitle: 'Yoga of Liberation' },
 };
 
-function VerseCard({ verse }) {
+function VerseCard({ verse, onSpeak, speakingId }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   if (!verse) return null;
 
+  const verseText = verse.translation
+    ? `Chapter ${verse.chapter}, Verse ${verse.verse}. ${verse.sanskrit}. ${verse.translation}. ${verse.explanation || ''}`
+    : '';
+  const verseId = `verse-${verse.chapter}-${verse.verse}`;
+
   return (
-    <div className="mt-3 bg-saffron-600/10 border border-saffron-600/20 rounded-xl p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-      <div className="flex items-center gap-2 mb-2">
+    <div className="mt-3 bg-gradient-to-br from-saffron-600/10 to-orange-600/5 border border-saffron-600/20 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:border-saffron-600/40" onClick={() => setExpanded(!expanded)}>
+      <div className="flex items-center justify-between mb-2">
         <span className="text-saffron-400 text-xs font-semibold bg-saffron-600/20 px-2 py-0.5 rounded-full">
           Chapter {verse.chapter}, Verse {verse.verse}
         </span>
+        {verseText && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <SpeakingButton
+              isSpeaking={speakingId === verseId}
+              onToggle={() => onSpeak(verseText, verseId, 'wisdom')}
+              size="sm"
+            />
+          </div>
+        )}
       </div>
       <p className="text-saffron-200 text-sm italic mb-1">{verse.sanskrit}</p>
       <p className="text-saffron-100 text-sm font-medium">"{verse.translation}"</p>
@@ -254,6 +269,7 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [speakingId, setSpeakingId] = useState(null);
   const [showChapterBrowser, setShowChapterBrowser] = useState(false);
+  const [autoRead, setAutoRead] = useState(false);
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -376,7 +392,7 @@ export default function App() {
     }
   };
 
-  const speak = async (text, id) => {
+  const speak = async (text, id, emotion = 'default') => {
     if (speakingId === id) {
       // Stop speaking
       if (window._gitaAudio) { window._gitaAudio.pause(); window._gitaAudio = null; }
@@ -392,7 +408,7 @@ export default function App() {
       const res = await fetch(`${API}/api/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, lang: i18n.language }),
+        body: JSON.stringify({ text, lang: i18n.language, emotion }),
       });
       if (!res.ok) throw new Error('TTS request failed');
       const blob = await res.blob();
@@ -430,6 +446,14 @@ export default function App() {
         ...prev,
         { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions },
       ]);
+
+      // Auto-read verse if enabled
+      if (autoRead && data.verse && data.verse.translation) {
+        setTimeout(() => {
+          const readText = `${data.verse.translation}. ${data.message}`;
+          speak(readText, 'auto-' + Date.now());
+        }, 500);
+      }
     } catch (err) {
       toast.error(t('chat.connectionError'));
       setMessages(prev => [
@@ -466,6 +490,28 @@ export default function App() {
           <div className="flex items-center gap-1">
             <LanguageSelector />
             <button
+              onClick={() => setAutoRead(!autoRead)}
+              className={`p-2 rounded-lg transition-all duration-300 ${autoRead ? 'text-saffron-400 bg-saffron-600/20 shadow-sm shadow-saffron-500/20' : 'text-gray-400 hover:text-saffron-400 hover:bg-white/5'}`}
+              title={autoRead ? 'Auto-read: ON' : 'Auto-read: OFF'}
+            >
+              {autoRead ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="2" x2="22" y1="2" y2="22"/>
+                  <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/>
+                  <path d="M5 10v2a7 7 0 0 0 12 5"/>
+                  <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/>
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
+                  <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+              )}
+            </button>
+            <button
               onClick={() => setShowChapterBrowser(true)}
               className="text-gray-400 hover:text-saffron-400 p-2 rounded-lg hover:bg-white/5 transition-colors"
               title="Browse all chapters"
@@ -499,27 +545,16 @@ export default function App() {
                 )}
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 
-                {msg.verse && <VerseCard verse={msg.verse} />}
+                {msg.verse && <VerseCard verse={msg.verse} onSpeak={speak} speakingId={speakingId} />}
 
                 {msg.role === 'assistant' && msg.content && (
-                  <button
-                    onClick={() => speak(msg.content, i)}
-                    className="mt-2 text-xs text-gray-400 hover:text-saffron-400 flex items-center gap-1 transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {speakingId === i ? (
-                        <>
-                          <rect x="6" y="4" width="4" height="16" rx="1" />
-                          <rect x="14" y="4" width="4" height="16" rx="1" />
-                        </>
-                      ) : (
-                        <>
-                          <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
-                        </>
-                      )}
-                    </svg>
-                    {speakingId === i ? t('chat.stop') : t('chat.listen')}
-                  </button>
+                  <div className="mt-2">
+                    <SpeakingButton
+                      isSpeaking={speakingId === i}
+                      onToggle={() => speak(msg.content, i, msg.emotions?.[0] || 'default')}
+                      size="sm"
+                    />
+                  </div>
                 )}
               </div>
             </div>
