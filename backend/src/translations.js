@@ -162,8 +162,6 @@ const langDisplayNames = {
 function detectLanguage(text) {
   const lower = text.toLowerCase();
 
-  // Hindi (Devanagari script)
-  if (/[\u0900-\u097F]/.test(text)) return 'hi';
   // Tamil
   if (/[\u0B80-\u0BFF]/.test(text)) return 'ta';
   // Telugu
@@ -176,16 +174,14 @@ function detectLanguage(text) {
   if (/[\u0C80-\u0CFF]/.test(text)) return 'kn';
   // Malayalam
   if (/[\u0D00-\u0D7F]/.test(text)) return 'ml';
-  // Devanagari (Marathi also uses Devanagari, but we default to Hindi for Devanagari)
-  // Marathi can be detected by specific words
+  // Devanagari — check Marathi-specific words BEFORE defaulting to Hindi
   if (/[\u0900-\u097F]/.test(text)) {
-    const marathiWords = ['आहे', 'आहेत', 'होय', 'नाही', 'करा', 'करू', 'म्हणून', 'माझ्या', 'तुम्हाला'];
+    const marathiWords = ['आहे', 'आहेत', 'होय', 'नाही', 'करा', 'करू', 'म्हणून', 'माझ्या', 'तुम्हाला', 'मी', 'तू', 'तो', 'ती'];
     if (marathiWords.some(w => text.includes(w))) return 'mr';
     return 'hi';
   }
 
-  // For Latin script, try to detect by language-specific words
-  // For Latin script, default to English
+  // Latin script — default to English
   return 'en';
 }
 

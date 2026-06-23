@@ -165,6 +165,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
 }
 
 function VoiceButton({ isListening, onToggle }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onToggle}
@@ -240,7 +241,7 @@ function LanguageSelector() {
 }
 
 export default function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -269,6 +270,16 @@ export default function App() {
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Update welcome message when language changes
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].role === 'assistant' && !prev[0].verse) {
+        return [{ ...prev[0], content: t('chat.welcome') }];
+      }
+      return prev;
+    });
+  }, [i18n.language, t]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -343,27 +354,24 @@ export default function App() {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-IN';
+
+    // Language-aware TTS
+    const langMap = {
+      en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN',
+      mr: 'mr-IN', bn: 'bn-IN', kn: 'kn-IN', gu: 'gu-IN', ml: 'ml-IN',
+    };
+    const targetLang = langMap[i18n.language] || 'en-IN';
+    utterance.lang = targetLang;
     utterance.rate = 0.85;
     utterance.pitch = 0.9;
 
-    // Find Indian English male voice
     const voices = window.speechSynthesis.getVoices();
-    const indianMaleVoice = voices.find(v =>
-      v.lang === 'en-IN' && v.name.toLowerCase().includes('male')
-    ) || voices.find(v =>
-      v.lang === 'en-IN' && (v.name.includes('Ravi') || v.name.includes('Vijay') || v.name.includes('Aditya') || v.name.includes('Google IN'))
-    ) || voices.find(v =>
-      v.lang === 'en-IN'
-    ) || voices.find(v =>
-      v.lang.startsWith('hi') || v.lang.startsWith('en-IN')
-    );
+    const matchingVoice = voices.find(v => v.lang === targetLang && v.name.toLowerCase().includes('male'))
+      || voices.find(v => v.lang === targetLang)
+      || voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
 
-    if (indianMaleVoice) {
-      utterance.voice = indianMaleVoice;
-      console.log('Using voice:', indianMaleVoice.name, indianMaleVoice.lang);
-    } else {
-      console.log('No Indian voice found, using default. Available:', voices.map(v => v.name + '(' + v.lang + ')'));
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
     }
 
     utterance.onend = () => setSpeakingId(null);

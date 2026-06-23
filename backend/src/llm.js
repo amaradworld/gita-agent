@@ -55,6 +55,11 @@ async function callOpenAI(messages) {
       temperature: 0.7,
     }),
   });
+  if (!res.ok) {
+    const err = await res.text().catch(() => 'unknown');
+    console.error(`OpenAI API error ${res.status}: ${err}`);
+    return '';
+  }
   const data = await res.json();
   return data.choices?.[0]?.message?.content || '';
 }
@@ -77,6 +82,11 @@ async function callGemini(messages) {
       }),
     }
   );
+  if (!res.ok) {
+    const err = await res.text().catch(() => 'unknown');
+    console.error(`Gemini API error ${res.status}: ${err}`);
+    return '';
+  }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
