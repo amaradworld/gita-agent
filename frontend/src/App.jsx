@@ -340,21 +340,58 @@ export default function App() {
     }
   }, [i18n.language, t]);
 
+  const audioRef = useRef(null);
+
   const speak = async (text, id, emotion = 'default') => {
-    if (speakingId === id) { if (window._gitaAudio) { window._gitaAudio.pause(); window._gitaAudio = null; } setSpeakingId(null); return; }
-    if (window._gitaAudio) { window._gitaAudio.pause(); window._gitaAudio = null; }
-    setSpeakingId(id);
+    // Toggle off if same button clicked
+    if (speakingId === id) {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      setSpeakingId(null);
+      return;
+    }
+
+    // Stop any previous audio
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setSpeakingId(null);
+
+    // Small delay to ensure previous audio is fully stopped
+    await new Promise(r => setTimeout(r, 100));
+
     try {
-      const res = await fetch(`${API}/api/tts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, lang: i18n.language, emotion }) });
+      const res = await fetch(`${API}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang: i18n.language, emotion }),
+      });
       if (!res.ok) throw new Error('TTS failed');
+
       const blob = await res.blob();
+      if (blob.size < 500) throw new Error('Audio too small');
+
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      window._gitaAudio = audio;
-      audio.onended = () => { setSpeakingId(null); URL.revokeObjectURL(url); };
-      audio.onerror = () => { setSpeakingId(null); URL.revokeObjectURL(url); };
+      audioRef.current = audio;
+      setSpeakingId(id);
+
+      audio.onended = () => {
+        setSpeakingId(null);
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+
+      audio.onerror = (e) => {
+        console.error('Audio error:', e);
+        setSpeakingId(null);
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+
       await audio.play();
-    } catch (err) { console.error('TTS error:', err); setSpeakingId(null); }
+    } catch (err) {
+      console.error('TTS error:', err);
+      setSpeakingId(null);
+      if (audioRef.current) { audioRef.current = null; }
+    }
   };
 
   const sendMessage = async () => {
