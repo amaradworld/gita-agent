@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import pino from 'pino';
 import rateLimit from 'express-rate-limit';
+import { randomUUID } from 'crypto';
 import { generateResponse } from './llm.js';
 import ttsRouter from './tts.js';
 import {
@@ -39,6 +40,16 @@ const limiter = rateLimit({
 });
 app.use('/api/chat', limiter);
 
+// Security: TTS rate limit — 10 per minute (stricter, each spawns upstream calls)
+const ttsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many TTS requests. Please wait.' },
+});
+app.use('/api/tts', ttsLimiter);
+
 // Security: Stricter rate limit for session creation — 5 per minute
 const sessionLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -46,21 +57,23 @@ const sessionLimiter = rateLimit({
   message: { error: 'Too many session requests.' },
 });
 
-// TTS endpoint (Microsoft Edge Neural TTS)
+// TTS endpoint
 app.use('/api/tts', ttsRouter);
 
 // Chat history storage — bounded to 500 sessions max (LRU-style)
 const MAX_SESSIONS = 500;
+const MAX_SESSIONS_PER_IP = 5; // Prevent one IP from exhausting all slots
 const chatSessions = new Map();
+const sessionIPs = new Map(); // sessionId -> ip
 
 function cleanupSessions() {
   if (chatSessions.size > MAX_SESSIONS) {
-    // Delete oldest 20% of sessions
     const toDelete = Math.floor(MAX_SESSIONS * 0.2);
     let count = 0;
     for (const key of chatSessions.keys()) {
       if (count >= toDelete) break;
       chatSessions.delete(key);
+      sessionIPs.delete(key);
       count++;
     }
     logger.info(`Cleaned up ${count} old sessions`);
@@ -147,8 +160,10 @@ app.get('/api/search', (req, res) => {
 
 app.post('/api/session/new', sessionLimiter, (req, res) => {
   cleanupSessions();
-  const sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const sessionId = randomUUID();
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
   chatSessions.set(sessionId, []);
+  sessionIPs.set(sessionId, ip);
   res.json({ sessionId });
 });
 
@@ -165,24 +180,29 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message too short' });
     }
 
-    // Security: Validate sessionId
-    const safeSessionId = typeof sessionId === 'string' && sessionId.length < 50 ? sessionId : 'default';
+    // Security: Validate sessionId (UUID format or 'default')
+    const safeSessionId = (sessionId === 'default' || /^[0-9a-f-]{36}$/i.test(sessionId))
+      ? sessionId : 'default';
+
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
 
     if (!chatSessions.has(safeSessionId)) {
+      // Limit sessions per IP to prevent exhaustion attack
+      const ipSessionCount = [...sessionIPs.values()].filter(v => v === ip).length;
+      if (ipSessionCount >= MAX_SESSIONS_PER_IP && safeSessionId !== 'default') {
+        return res.status(429).json({ error: 'Too many sessions. Please refresh.' });
+      }
       cleanupSessions();
       chatSessions.set(safeSessionId, []);
+      sessionIPs.set(safeSessionId, ip);
     }
     const history = chatSessions.get(safeSessionId);
 
     const response = await generateResponse(trimmed, history, lang);
 
-    history.push({ role: 'user', content: trimmed });
-    history.push({ role: 'assistant', content: response.message });
-
-    // Cap session history at 20 messages
-    if (history.length > 20) {
-      chatSessions.set(safeSessionId, history.slice(-20));
-    }
+    // Clone history to avoid race condition
+    const updated = [...history, { role: 'user', content: trimmed }, { role: 'assistant', content: response.message }];
+    chatSessions.set(safeSessionId, updated.slice(-20));
 
     logger.info({ emotions: response.emotions, verse: `${response.verse.chapter}.${response.verse.verse}`, lang }, 'Chat response generated');
 
@@ -195,21 +215,22 @@ app.post('/api/chat', async (req, res) => {
 
 // ==================== GRACEFUL SHUTDOWN ====================
 
+const server = app.listen(PORT, () => {
+  logger.info(`Gita Agent running on port ${PORT} with ${gitaVerses.length} verses across 18 chapters`);
+});
+
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down...');
-  process.exit(0);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 5000); // Force exit after 5s
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down...');
-  process.exit(0);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 5000);
 });
 
-// Unhandled rejection guard
 process.on('unhandledRejection', (reason) => {
   logger.error({ reason }, 'Unhandled promise rejection');
-});
-
-app.listen(PORT, () => {
-  logger.info(`Gita Agent running on port ${PORT} with ${gitaVerses.length} verses across 18 chapters`);
 });

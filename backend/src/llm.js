@@ -44,26 +44,37 @@ RESPONSE FORMAT:
 4. A gentle closing thought or question`;
 
 async function callOpenAI(messages) {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages,
-      max_tokens: 600,
-      temperature: 0.7,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text().catch(() => 'unknown');
-    console.error(`OpenAI API error ${res.status}: ${err}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages,
+        max_tokens: 600,
+        temperature: 0.7,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => 'unknown');
+      console.error(`OpenAI API error ${res.status}: ${err}`);
+      return '';
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch (e) {
+    if (e.name === 'AbortError') console.error('OpenAI timeout');
+    else console.error('OpenAI error:', e.message);
     return '';
+  } finally {
+    clearTimeout(timeout);
   }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 async function callGemini(messages) {
@@ -72,7 +83,10 @@ async function callGemini(messages) {
     parts: [{ text: m.content }],
   }));
 
-  const res = await fetch(
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
     {
       method: 'POST',
@@ -82,6 +96,7 @@ async function callGemini(messages) {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         generationConfig: { maxOutputTokens: 600, temperature: 0.7 },
       }),
+      signal: controller.signal,
     }
   );
   if (!res.ok) {
@@ -91,6 +106,13 @@ async function callGemini(messages) {
   }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  } catch (e) {
+    if (e.name === 'AbortError') console.error('Gemini timeout');
+    else console.error('Gemini error:', e.message);
+    return '';
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function generateResponse(userMessage, chatHistory = [], lang = 'en') {
@@ -196,7 +218,10 @@ Detected emotions: ${emotions.join(', ')}`;
     aiResponse = await callOpenAI(messages);
   } else if (GEMINI_KEY) {
     aiResponse = await callGemini(messages);
-  } else {
+  }
+
+  // Fallback if LLM returned empty or no key configured
+  if (!aiResponse) {
     aiResponse = generateFallbackResponse(userMessage, emotions, translated, userLang);
   }
 
@@ -332,12 +357,22 @@ function generateFallbackResponse(userMessage, emotions, verse, lang = 'en') {
   const openerList = langOpeners[emotions[0]] || langOpeners.default;
   const opener = openerList[Math.floor(Math.random() * openerList.length)];
 
-  const chapterLabel = lang === 'hi' ? 'अध्याय' : 'Chapter';
-  const verseLabel = lang === 'hi' ? 'श्लोक' : 'Verse';
+  const labels = {
+    en: { chapter: 'Chapter', verse: 'Verse', from: 'From the Bhagavad Gita' },
+    hi: { chapter: 'अध्याय', verse: 'श्लोक', from: 'भगवद्गीता' },
+    ta: { chapter: 'அதிகாரம்', verse: 'சுலோகம்', from: 'பகவத் கீதை' },
+    te: { chapter: 'అధ్యాయం', verse: 'శ్లోకం', from: 'భగవద్గీత' },
+    mr: { chapter: 'अध्याय', verse: 'श्लोक', from: 'भगवद्गीता' },
+    bn: { chapter: 'অধ্যায়', verse: 'শ্লোক', from: 'ভগবদ্গীতা' },
+    kn: { chapter: 'ಅಧ್ಯಾಯ', verse: 'ಶ್ಲೋಕ', from: 'ಭಗವದ್ಗೀತೆ' },
+    gu: { chapter: 'અધ્યાય', verse: 'શ્લોક', from: 'ભગવદ્ગીતા' },
+    ml: { chapter: 'അധ്യായം', verse: 'ശ്ലോകം', from: 'ഭഗവദ്ഗീത' },
+  };
+  const l = labels[lang] || labels.en;
 
   return `${opener}
 
-${lang === 'hi' ? 'भगवद्गीता' : 'From the Bhagavad Gita'}, ${chapterLabel} ${verse.chapter}, ${verseLabel} ${verse.verse}:
+${l.from}, ${l.chapter} ${verse.chapter}, ${l.verse} ${verse.verse}:
 "${verse.translation}"
 
 ${verse.explanation}

@@ -8,6 +8,14 @@ const LANG_MAP = {
   'mr': 'mr', 'bn': 'bn', 'kn': 'kn', 'gu': 'gu', 'ml': 'ml',
 };
 
+// Validate redirect stays on google domains
+function isGoogleRedirect(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.endsWith('google.com') || parsed.hostname.endsWith('googleapis.com');
+  } catch { return false; }
+}
+
 function fetchGoogleTTS(text, lang) {
   return new Promise((resolve, reject) => {
     const tl = LANG_MAP[lang] || 'en';
@@ -23,20 +31,45 @@ function fetchGoogleTTS(text, lang) {
     }, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
         const redirectUrl = res.headers.location;
+        if (!isGoogleRedirect(redirectUrl)) {
+          return reject(new Error('Invalid redirect target'));
+        }
         https.get(redirectUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000 }, (res2) => {
           const chunks = [];
           res2.on('data', (c) => chunks.push(c));
-          res2.on('end', () => resolve(Buffer.concat(chunks)));
+          res2.on('end', () => {
+            const buf = Buffer.concat(chunks);
+            // Validate actual audio content, not just byte count
+            if (res2.headers['content-type']?.includes('audio') || (buf.length > 500 && buf[0] === 0xff)) {
+              resolve(buf);
+            } else {
+              reject(new Error('Response is not audio'));
+            }
+          });
           res2.on('error', reject);
         }).on('error', reject);
         return;
       }
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        if (res.headers['content-type']?.includes('audio') || (buf.length > 500 && buf[0] === 0xff)) {
+          resolve(buf);
+        } else {
+          reject(new Error('Response is not audio'));
+        }
+      });
       res.on('error', reject);
     }).on('error', reject);
   });
+}
+
+// Split text into sentences — supports Indian language punctuation (।)
+function splitSentences(text) {
+  // Split on period, !, ?, and Devanagari danda (।)
+  const parts = text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text];
+  return parts.filter(s => s.trim().length > 0);
 }
 
 router.post('/', async (req, res) => {
@@ -47,9 +80,7 @@ router.post('/', async (req, res) => {
     }
 
     const safeText = text.replace(/[*_`#]/g, '').slice(0, 2000);
-
-    // Split into sentences for better quality
-    const sentences = safeText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [safeText];
+    const sentences = splitSentences(safeText);
     const audioChunks = [];
 
     for (const sentence of sentences) {
@@ -57,7 +88,7 @@ router.post('/', async (req, res) => {
       if (trimmed.length > 0) {
         try {
           const audio = await fetchGoogleTTS(trimmed, lang);
-          if (audio.length > 500) audioChunks.push(audio);
+          audioChunks.push(audio);
         } catch (e) {
           console.error('TTS chunk failed:', e.message);
         }
@@ -71,6 +102,7 @@ router.post('/', async (req, res) => {
     const combined = Buffer.concat(audioChunks);
     res.set({
       'Content-Type': 'audio/mpeg',
+      'Content-Length': combined.length.toString(),
       'Cache-Control': 'public, max-age=3600',
     });
     res.send(combined);
