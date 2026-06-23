@@ -287,15 +287,28 @@ export default function App() {
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.lang = 'en-IN';
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(prev => prev ? prev + ' ' + transcript : transcript);
-      setIsListening(false);
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      if (finalTranscript) {
+        setInput(prev => prev ? prev + ' ' + finalTranscript : finalTranscript);
+        setIsListening(false);
+      } else if (interimTranscript) {
+        setInput(interimTranscript);
+      }
     };
 
     recognition.onerror = (event) => {
@@ -331,6 +344,11 @@ export default function App() {
       setIsListening(false);
     } else {
       try {
+        const langMap = {
+          en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN',
+          mr: 'mr-IN', bn: 'bn-IN', kn: 'kn-IN', gu: 'gu-IN', ml: 'ml-IN',
+        };
+        recognitionRef.current.lang = langMap[i18n.language] || 'en-IN';
         recognitionRef.current.start();
         setIsListening(true);
         toast.success(t('chat.listening'), { duration: 2000 });
