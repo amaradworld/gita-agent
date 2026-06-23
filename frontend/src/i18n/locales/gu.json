@@ -1,5 +1,8 @@
 {
-  "app": { "title": "ગીતા જ્ઞાન", "subtitle": "AI આધ્યાત્મિક માર્ગદર્શક" },
+  "app": {
+    "title": "ગીતા જ્ઞાન",
+    "subtitle": "AI આધ્યાત્મિક માર્ગદર્શક"
+  },
   "chat": {
     "placeholder": "તમારા હૃદયની વાત શેર કરો...",
     "welcome": "નમસ્તે! હું તમારો ગીતા જ્ઞાન માર્ગદર્શક છું. તમારા મનની વાત કહો, ભગવદ્ગીતાનું જ્ઞાન આપીશ.\n\nટાઈપ કરી શકો છો અથવા માઈક્રોફોન વાપરી શકો છો.",
@@ -12,22 +15,48 @@
     "ttsNotSupported": "આ બ્રાઉઝરમાં ટેક્સ્ટ-ટુ-સ્પીચ સમર્થિત નથી",
     "connectionError": "કનેક્ટ કરવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
     "genericError": "માફ કરો, કંઈક ખોટું થયું. કૃપા કરીને ફરી પ્રયાસ કરો. દૈવી પ્રકાશ હંમેશા તમારી સાથે છે.",
-    "stop": "બંધ કરો", "listen": "સાંભળો", "poweredBy": "ભગવદ્ગીતા જ્ઞાન દ્વારા સંચાલિત"
+    "stop": "બંધ કરો",
+    "listen": "સાંભળો",
+    "poweredBy": "ભગવદ્ગીતા જ્ઞાન દ્વારા સંચાલિત",
+    "ttsFailed": "Voice playback failed. Please try again."
   },
   "chapterBrowser": {
-    "title": "ભગવદ્ગીતા", "chapters": "18 અધ્યાયો", "verses": "700+ શ્લોકો",
-    "backToChapters": "← અધ્યાયો પર પાછા", "loadingVerses": "શ્લોકો લોડ થઈ રહ્યા છે...",
+    "title": "ભગવદ્ગીતા",
+    "chapters": "18 અધ્યાયો",
+    "verses": "700+ શ્લોકો",
+    "backToChapters": "← અધ્યાયો પર પાછા",
+    "loadingVerses": "શ્લોકો લોડ થઈ રહ્યા છે...",
     "noVerses": "આ અધ્યાય માટે હજુ શ્લોકો ઉપલબ્ધ નથી.",
-    "readMore": "વધુ વાંચવા માટે ક્લિક કરો", "collapse": "સંકોચવા માટે ક્લિક કરો",
+    "readMore": "વધુ વાંચવા માટે ક્લિક કરો",
+    "collapse": "સંકોચવા માટે ક્લિક કરો",
     "verseCount": "{{count}} શ્લોકો"
   },
   "emotions": {
-    "anxiety": "ચિંતા", "sadness": "દુઃખ", "grief": "શોક", "loneliness": "એકલાપણું",
-    "anger": "ક્રોધ", "confusion": "ગૂંચવણ", "jealousy": "ઈર્ષ્યા", "selfDoubt": "સ્વસંદેહ",
-    "guilt": "અપરાધભાવ", "fear": "ભય", "love": "પ્રેમ", "ego": "અહંકાર",
-    "money": "પૈસા", "death": "મૃત્યુ", "karma": "કર્મ", "meditation": "ધ્યાન",
-    "surrender": "સમર્પણ", "friendship": "મિત્રતા", "patience": "ધીરજ", "forgiveness": "ક્ષમા",
-    "dharma": "ધર્મ", "hope": "આશા", "wisdom": "જ્ઞાન", "divine": "દૈવી",
-    "desire": "ઈચ્છા", "balance": "સંતુલન"
+    "anxiety": "ચિંતા",
+    "sadness": "દુઃખ",
+    "grief": "શોક",
+    "loneliness": "એકલાપણું",
+    "anger": "ક્રોધ",
+    "confusion": "ગૂંચવણ",
+    "jealousy": "ઈર્ષ્યા",
+    "selfDoubt": "સ્વસંદેહ",
+    "guilt": "અપરાધભાવ",
+    "fear": "ભય",
+    "love": "પ્રેમ",
+    "ego": "અહંકાર",
+    "money": "પૈસા",
+    "death": "મૃત્યુ",
+    "karma": "કર્મ",
+    "meditation": "ધ્યાન",
+    "surrender": "સમર્પણ",
+    "friendship": "મિત્રતા",
+    "patience": "ધીરજ",
+    "forgiveness": "ક્ષમા",
+    "dharma": "ધર્મ",
+    "hope": "આશા",
+    "wisdom": "જ્ઞાન",
+    "divine": "દૈવી",
+    "desire": "ઈચ્છા",
+    "balance": "સંતુલન"
   }
 }

@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import pino from 'pino';
 import rateLimit from 'express-rate-limit';
 import { generateResponse } from './llm.js';
+import ttsRouter from './tts.js';
 import {
   gitaVerses, chapterNames, findVerseByChapterVerse,
   findVersesByChapter, isVerseRequest, isChapterRequest,
@@ -44,6 +45,9 @@ const sessionLimiter = rateLimit({
   max: 5,
   message: { error: 'Too many session requests.' },
 });
+
+// TTS endpoint (Microsoft Edge Neural TTS)
+app.use('/api/tts', ttsRouter);
 
 // Chat history storage — bounded to 500 sessions max (LRU-style)
 const MAX_SESSIONS = 500;

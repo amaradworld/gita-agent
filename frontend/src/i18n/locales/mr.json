@@ -1,5 +1,8 @@
 {
-  "app": { "title": "गीता ज्ञान", "subtitle": "AI आध्यात्मिक मार्गदर्शक" },
+  "app": {
+    "title": "गीता ज्ञान",
+    "subtitle": "AI आध्यात्मिक मार्गदर्शक"
+  },
   "chat": {
     "placeholder": "तुमच्या मनातले सांगा...",
     "welcome": "नमस्कार! मी तुमचा गीता ज्ञान मार्गदर्शक आहे. तुमच्या मनातले सांगा, भगवद्गीतेचे ज्ञान देईन.\n\nतुम्ही टाइप करू शकता किंवा मायक्रोफोन वापरू शकता.",
@@ -12,22 +15,48 @@
     "ttsNotSupported": "या ब्राउझरमध्ये टेक्स्ट-टू-स्पीच समर्थित नाही",
     "connectionError": "जोडण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
     "genericError": "माफ करा, काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा. दैवी प्रकाश नेहमी तुमच्यासोबत आहे.",
-    "stop": "थांबा", "listen": "ऐका", "poweredBy": "भगवद्गीता ज्ञानाने चालवले"
+    "stop": "थांबा",
+    "listen": "ऐका",
+    "poweredBy": "भगवद्गीता ज्ञानाने चालवले",
+    "ttsFailed": "Voice playback failed. Please try again."
   },
   "chapterBrowser": {
-    "title": "भगवद्गीता", "chapters": "18 अध्याय", "verses": "700+ श्लोक",
-    "backToChapters": "← अध्यायांकडे परत", "loadingVerses": "श्लोक लोड होत आहेत...",
+    "title": "भगवद्गीता",
+    "chapters": "18 अध्याय",
+    "verses": "700+ श्लोक",
+    "backToChapters": "← अध्यायांकडे परत",
+    "loadingVerses": "श्लोक लोड होत आहेत...",
     "noVerses": "या अध्यायासाठी अजून श्लोक उपलब्ध नाहीत.",
-    "readMore": "अधिक वाचण्यासाठी क्लिक करा", "collapse": "संकुचित करण्यासाठी क्लिक करा",
+    "readMore": "अधिक वाचण्यासाठी क्लिक करा",
+    "collapse": "संकुचित करण्यासाठी क्लिक करा",
     "verseCount": "{{count}} श्लोक"
   },
   "emotions": {
-    "anxiety": "चिंता", "sadness": "दुःख", "grief": "शोक", "loneliness": "एकटेपण",
-    "anger": "संताप", "confusion": "गोंधळ", "jealousy": "मत्सर", "selfDoubt": "स्वतःवर शंका",
-    "guilt": "अपराधभाव",     "fear": "भीती", "love": "प्रेम", "ego": "अहंकार",
-    "money": "पैसा", "death": "मृत्यू", "karma": "कर्म", "meditation": "ध्यान",
-    "surrender": "समर्पण", "friendship": "मैत्री", "patience": "धीरज", "forgiveness": "क्षमा",
-    "dharma": "धर्म", "hope": "आशा", "wisdom": "ज्ञान", "divine": "दैवी",
-    "desire": "इच्छा", "balance": "संतुलन"
+    "anxiety": "चिंता",
+    "sadness": "दुःख",
+    "grief": "शोक",
+    "loneliness": "एकटेपण",
+    "anger": "संताप",
+    "confusion": "गोंधळ",
+    "jealousy": "मत्सर",
+    "selfDoubt": "स्वतःवर शंका",
+    "guilt": "अपराधभाव",
+    "fear": "भीती",
+    "love": "प्रेम",
+    "ego": "अहंकार",
+    "money": "पैसा",
+    "death": "मृत्यू",
+    "karma": "कर्म",
+    "meditation": "ध्यान",
+    "surrender": "समर्पण",
+    "friendship": "मैत्री",
+    "patience": "धीरज",
+    "forgiveness": "क्षमा",
+    "dharma": "धर्म",
+    "hope": "आशा",
+    "wisdom": "ज्ञान",
+    "divine": "दैवी",
+    "desire": "इच्छा",
+    "balance": "संतुलन"
   }
 }

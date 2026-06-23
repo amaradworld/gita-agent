@@ -12,6 +12,8 @@
     "express": "^4.21.0",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.0.0",
+    "msedge-tts": "^2.0.6",
+    "pdf2json": "^4.0.3",
     "pino": "^9.4.0",
     "pino-pretty": "^11.2.2"
   }

@@ -289,8 +289,8 @@ export default function App() {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-IN';
     recognition.maxAlternatives = 1;
+    recognition.lang = 'en-IN';
 
     recognition.onresult = (event) => {
       let finalTranscript = '';
@@ -313,18 +313,35 @@ export default function App() {
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
+      // Auto-recover from transient errors
+      if (event.error === 'no-speech' || event.error === 'aborted') {
+        // Restart silently
+        setTimeout(() => {
+          if (recognitionRef.current && isListening) {
+            try { recognitionRef.current.start(); } catch {}
+          }
+        }, 500);
+        return;
+      }
       setIsListening(false);
       if (event.error === 'not-allowed') {
         toast.error(t('chat.micDenied'));
-      } else if (event.error === 'no-speech') {
-        toast.error(t('chat.noSpeech'));
-      } else if (event.error !== 'aborted') {
+      } else {
         toast.error(t('chat.voiceFailed'));
       }
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      // Auto-restart if still supposed to be listening
+      if (isListening) {
+        setTimeout(() => {
+          if (recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch {}
+          }
+        }, 300);
+      } else {
+        setIsListening(false);
+      }
     };
 
     recognitionRef.current = recognition;
@@ -359,43 +376,37 @@ export default function App() {
     }
   };
 
-  const speak = (text, id) => {
-    if (!('speechSynthesis' in window)) {
-      toast.error(t('chat.ttsNotSupported'));
-      return;
-    }
-
-    window.speechSynthesis.cancel();
+  const speak = async (text, id) => {
     if (speakingId === id) {
+      // Stop speaking
+      if (window._gitaAudio) { window._gitaAudio.pause(); window._gitaAudio = null; }
       setSpeakingId(null);
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Stop any previous audio
+    if (window._gitaAudio) { window._gitaAudio.pause(); window._gitaAudio = null; }
 
-    // Language-aware TTS
-    const langMap = {
-      en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN',
-      mr: 'mr-IN', bn: 'bn-IN', kn: 'kn-IN', gu: 'gu-IN', ml: 'ml-IN',
-    };
-    const targetLang = langMap[i18n.language] || 'en-IN';
-    utterance.lang = targetLang;
-    utterance.rate = 0.85;
-    utterance.pitch = 0.9;
-
-    const voices = window.speechSynthesis.getVoices();
-    const matchingVoice = voices.find(v => v.lang === targetLang && v.name.toLowerCase().includes('male'))
-      || voices.find(v => v.lang === targetLang)
-      || voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
-
-    if (matchingVoice) {
-      utterance.voice = matchingVoice;
-    }
-
-    utterance.onend = () => setSpeakingId(null);
-    utterance.onerror = () => setSpeakingId(null);
     setSpeakingId(id);
-    window.speechSynthesis.speak(utterance);
+    try {
+      const res = await fetch(`${API}/api/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang: i18n.language }),
+      });
+      if (!res.ok) throw new Error('TTS request failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      window._gitaAudio = audio;
+      audio.onended = () => { setSpeakingId(null); URL.revokeObjectURL(url); };
+      audio.onerror = () => { setSpeakingId(null); URL.revokeObjectURL(url); toast.error(t('chat.ttsFailed')); };
+      await audio.play();
+    } catch (err) {
+      console.error('TTS error:', err);
+      setSpeakingId(null);
+      toast.error(t('chat.ttsFailed'));
+    }
   };
 
   const sendMessage = async () => {

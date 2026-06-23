@@ -10,6 +10,7 @@
     "noSpeech": "No speech detected. Please try again.",
     "voiceFailed": "Voice recognition failed. Please try again.",
     "ttsNotSupported": "Text-to-speech not supported in this browser",
+    "ttsFailed": "Voice playback failed. Please try again.",
     "connectionError": "Failed to connect. Please try again.",
     "genericError": "I apologize, something went wrong. Please try again. The divine light is always with you.",
     "stop": "Stop",
