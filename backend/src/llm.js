@@ -7,7 +7,8 @@ import {
   isVerseRequest,
   isChapterRequest,
   chapterNames,
-  gitaVerses
+  gitaVerses,
+  searchGitaBook,
 } from './gita.js';
 
 import {
@@ -34,6 +35,7 @@ CORE RULES:
 - End with a gentle, uplifting thought or question
 - When asked about a specific chapter or verse, provide detailed explanation of that verse with its context and meaning
 - When asked about a chapter, summarize the key teachings of that chapter
+- When relevant passages from the Bhagavad Gita (As It Is by A.C. Bhaktivedanta Swami Prabhupada) are provided in the context, use them as authoritative reference. Quote or paraphrase from these passages to give accurate, book-based answers.
 
 RESPONSE FORMAT:
 1. Acknowledge their emotion (1 sentence)
@@ -139,9 +141,14 @@ export async function generateResponse(userMessage, chatHistory = [], lang = 'en
       const chapterVerses = findVersesByChapter(parsed.chapter);
       const chapterInfo = chapterNames[parsed.chapter] || {};
       if (chapterVerses.length > 0) {
+        // Search RAG for this chapter's content
+        const chapterRag = searchGitaBook(`Chapter ${parsed.chapter} ${chapterInfo.english || ''}`, 2);
+        const ragNote = chapterRag.length > 0
+          ? '\n\nFrom the Bhagavad Gita As It Is:\n' + chapterRag.map(p => p.text.slice(0, 800)).join('\n\n')
+          : '';
         const translated = getTranslatedVerse(chapterVerses[0], userLang);
         return buildVerseResponse(
-          `Here is Chapter ${parsed.chapter} — ${chapterInfo.english || ''} (${chapterInfo.subtitle || ''}). This chapter has ${chapterVerses.length} verse(s) in my collection. Here is the first one:`,
+          `Here is Chapter ${parsed.chapter} — ${chapterInfo.english || ''} (${chapterInfo.subtitle || ''}). This chapter has ${chapterVerses.length} verse(s) in my collection. Here is the first one:${ragNote}`,
           translated,
           chapterVerses.slice(1).map(v => getTranslatedVerse(v, userLang)),
           userLang
@@ -158,6 +165,14 @@ export async function generateResponse(userMessage, chatHistory = [], lang = 'en
 
   // Regular emotional query — use emotion-based verse matching
   const translated = getTranslatedVerse(verse, userLang);
+
+  // Search ISKCON Bhagavad Gita for relevant passages (RAG)
+  const ragPassages = searchGitaBook(userMessage, 3);
+  const ragContext = ragPassages.length > 0
+    ? '\n\nRELEVANT PASSAGES FROM BHAGAVAD GITA AS IT IS:\n' +
+      ragPassages.map((p, i) => `--- Passage ${i + 1} ---\n${p.text}`).join('\n\n')
+    : '';
+
   const verseContext = `
 RELEVANT GITA VERSE:
 Chapter ${translated.chapter}, Verse ${translated.verse}
@@ -165,6 +180,7 @@ Sanskrit: ${translated.sanskrit}
 Translation: "${translated.translation}"
 Explanation: ${translated.explanation}
 Related Advice: ${translated.advice}
+${ragContext}
 
 Detected emotions: ${emotions.join(', ')}`;
 

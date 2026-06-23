@@ -785,3 +785,66 @@ export function findBestVerse(emotions) {
 
   return bestMatch || gitaVerses[gitaVerses.length - 1];
 }
+
+// ==================== RAG SEARCH (ISKCON Bhagavad Gita As It Is) ====================
+
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+let ragChunks = [];
+let ragIndex = [];
+
+try {
+  ragChunks = JSON.parse(fs.readFileSync(join(__dirname, '..', 'gita_rag_chunks.json'), 'utf8'));
+  ragIndex = JSON.parse(fs.readFileSync(join(__dirname, '..', 'gita_rag_index.json'), 'utf8'));
+  console.log(`[RAG] Loaded ${ragChunks.length} chunks from ISKCON Bhagavad Gita`);
+} catch (e) {
+  console.warn('[RAG] Could not load chunks:', e.message);
+}
+
+const RAG_STOP = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may',
+  'might', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for',
+  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after',
+  'above', 'below', 'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then',
+  'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'every', 'both',
+  'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own',
+  'same', 'so', 'than', 'too', 'very', 'just', 'because', 'but', 'and', 'or', 'if',
+  'while', 'that', 'this', 'these', 'those', 'it', 'its', 'he', 'she', 'they', 'them',
+  'his', 'her', 'their', 'what', 'which', 'who', 'whom', 'my', 'your', 'our', 'me',
+  'him', 'us', 'about', 'up', 'also', 'even', 'now', 'man', 'one', 'like', 'much',
+  'know', 'take', 'come', 'make', 'made', 'say', 'said', 'give', 'let', 'go', 'see',
+  'tell', 'think', 'good', 'well', 'way', 'back', 'much', 'still']);
+
+function tokenizeRag(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !RAG_STOP.has(w));
+}
+
+export function searchGitaBook(query, topK = 3) {
+  if (ragChunks.length === 0 || ragIndex.length === 0) return [];
+
+  const queryTokens = tokenizeRag(query);
+  if (queryTokens.length === 0) return [];
+
+  const scored = ragIndex.map((ci, idx) => {
+    let score = 0;
+    for (const qt of queryTokens) {
+      if (ci.freq[qt]) score += ci.freq[qt];
+    }
+    return { idx, score };
+  });
+
+  return scored
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(s => ({
+      score: s.score,
+      text: ragChunks[s.idx].slice(0, 1500),
+    }));
+}
