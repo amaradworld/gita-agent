@@ -1,8 +1,15 @@
 {
-  "app": { "title": "Gita Gyan", "subtitle": "AI Spiritual Guide" },
+  "app": { "title": "Gita Gyan", "subtitle": "AI Spiritual Mentor" },
+  "nav": {
+    "chat": "Chat",
+    "daily": "Daily",
+    "journey": "Journey",
+    "goals": "Goals",
+    "guidance": "Guidance"
+  },
   "chat": {
     "placeholder": "Share what's on your heart...",
-    "welcome": "Namaste! I am your Gita Gyan guide. Share what is on your heart, and I will offer wisdom from the Bhagavad Gita to help you find peace and clarity.\n\nYou can type or use the microphone to speak.",
+    "welcome": "Namaste! I am your Gita Gyan spiritual mentor. I can help you with:\n\n• Life guidance from the Bhagavad Gita\n• Understanding your emotions\n• Finding verses for your situation\n• Daily wisdom and meditation\n\nWhat would you like guidance on?",
     "listening": "Listening... Speak now",
     "voiceNotSupported": "Voice recognition not supported in this browser. Try Chrome or Edge.",
     "voiceHttpsRequired": "Voice requires HTTPS. Please use HTTPS or localhost.",
@@ -16,6 +23,30 @@
     "stop": "Stop",
     "listen": "Listen",
     "poweredBy": "Powered by Bhagavad Gita wisdom"
+  },
+  "dailyVerse": {
+    "title": "Daily Verse",
+    "subtitle": "Start your day with divine wisdom"
+  },
+  "journey": {
+    "title": "Your Spiritual Journey",
+    "subtitle": "Track your progress and build consistency",
+    "streak": "Day Streak",
+    "versesRead": "Verses Read",
+    "chaptersExplored": "Chapters",
+    "sessions": "Sessions",
+    "overallProgress": "Overall Progress",
+    "favorites": "Favorite Verses"
+  },
+  "goals": {
+    "title": "Spiritual Goals",
+    "subtitle": "Set goals to guide your practice",
+    "saved": "Goals saved!"
+  },
+  "scenario": {
+    "title": "Life Guidance",
+    "subtitle": "Find wisdom for your life situation",
+    "placeholder": "Describe your situation..."
   },
   "chapterBrowser": {
     "title": "Bhagavad Gita",

@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'crypto';
 import { generateResponse } from './llm.js';
 import ttsRouter from './tts.js';
+import mentorRouter from './routes/mentor.js';
 import {
   gitaVerses, chapterNames, findVerseByChapterVerse,
   findVersesByChapter, isVerseRequest, isChapterRequest,
@@ -60,6 +61,9 @@ const sessionLimiter = rateLimit({
 // TTS endpoint
 app.use('/api/tts', ttsRouter);
 
+// Mentor routes — enhanced spiritual guidance
+app.use('/api/mentor', mentorRouter);
+
 // Chat history storage — bounded to 500 sessions max (LRU-style)
 const MAX_SESSIONS = 500;
 const MAX_SESSIONS_PER_IP = 5; // Prevent one IP from exhausting all slots
@@ -90,6 +94,7 @@ app.get('/health', (req, res) => {
     verses: gitaVerses.length,
     chapters: Object.keys(chapterNames).length,
     sessions: chatSessions.size,
+    features: ['daily-verse', 'scenarios', 'mood', 'streaks', 'goals', 'favorites', 'mentor', 'search'],
   });
 });
 
