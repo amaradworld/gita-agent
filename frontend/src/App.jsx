@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Component } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import SpeakingButton from './components/SpeakingButton';
@@ -6,6 +6,39 @@ import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premiu
 import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
 
 const API = '';
+
+/* ─── useDebounce hook ─── */
+function useDebounce(callback, delay) {
+  const timerRef = useRef(null);
+  return useCallback((...args) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => callback(...args), delay);
+  }, [callback, delay]);
+}
+
+/* ─── Error Boundary ─── */
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex-1 flex items-center justify-center p-8 text-center">
+          <div>
+            <p className="text-4xl mb-4">🕉</p>
+            <h2 className="text-white font-bold text-lg mb-2">Something went wrong</h2>
+            <p className="text-gray-500 text-sm mb-4">An unexpected error occurred.</p>
+            <button onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+              className="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 text-sm hover:bg-amber-500/30 transition-all">
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const LANGUAGES = [
   { code: 'en', label: 'English', native: 'English', flag: '🇮🇳' },
@@ -451,7 +484,9 @@ function SearchPage({ onSendMessage }) {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
   const setTimeoutRef = useRef(null);
+  const inputRef = useRef(null);
 
   const handleSearch = async (q) => {
     if (!q || q.trim().length < 2) return;
@@ -468,7 +503,7 @@ function SearchPage({ onSendMessage }) {
     setLoading(false);
   };
 
-  const handleSuggestions = async (q) => {
+  const fetchSuggestions = useCallback(async (q) => {
     if (q.length < 2) { setSuggestions([]); return; }
     try {
       const res = await fetch(`${API}/api/mentor/search/suggestions?q=${encodeURIComponent(q)}`);
@@ -476,8 +511,11 @@ function SearchPage({ onSendMessage }) {
       const data = await res.json();
       setSuggestions(data.suggestions || []);
       setShowSuggestions(data.suggestions?.length > 0);
+      setSelectedSuggestion(-1);
     } catch {}
-  };
+  }, []);
+
+  const debouncedSuggestions = useDebounce(fetchSuggestions, 250);
 
   const quickSearches = [
     { label: 'Stress relief', query: 'stress anxiety worry' },
@@ -500,28 +538,56 @@ function SearchPage({ onSendMessage }) {
       {/* Search Bar */}
       <div className="relative mb-6">
         <input
+          ref={inputRef}
           type="text"
           value={query}
-          onChange={e => { setQuery(e.target.value); handleSuggestions(e.target.value); }}
-          onKeyDown={e => { if (e.key === 'Enter') handleSearch(query); }}
+          onChange={e => { setQuery(e.target.value); debouncedSuggestions(e.target.value); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              if (selectedSuggestion >= 0 && suggestions[selectedSuggestion]) {
+                setQuery(suggestions[selectedSuggestion]);
+                handleSearch(suggestions[selectedSuggestion]);
+                setShowSuggestions(false);
+              } else {
+                handleSearch(query);
+              }
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setSelectedSuggestion(prev => Math.min(prev + 1, suggestions.length - 1));
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setSelectedSuggestion(prev => Math.max(prev - 1, -1));
+            } else if (e.key === 'Escape') {
+              setShowSuggestions(false);
+              setSelectedSuggestion(-1);
+            }
+          }}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           onBlur={() => { setTimeoutRef.current = setTimeout(() => setShowSuggestions(false), 200); }}
           placeholder={t('search.placeholder', 'Search verses, topics, emotions...')}
           className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all"
+          role="combobox"
+          aria-expanded={showSuggestions}
+          aria-autocomplete="list"
+          aria-label={t('search.placeholder', 'Search verses, topics, emotions...')}
         />
         <button
           onClick={() => handleSearch(query)}
           className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 flex items-center justify-center text-amber-400 transition-all"
+          aria-label="Search"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
         </button>
         {showSuggestions && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 py-2 z-50">
+          <div role="listbox" className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 py-2 z-50">
             {suggestions.map((s, i) => (
-              <button key={i} onClick={() => { clearTimeout(setTimeoutRef.current); setQuery(s); handleSearch(s); setShowSuggestions(false); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+              <button key={i} role="option" aria-selected={selectedSuggestion === i}
+                onMouseDown={e => { e.preventDefault(); clearTimeout(setTimeoutRef.current); setQuery(s); handleSearch(s); setShowSuggestions(false); }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-all ${
+                  selectedSuggestion === i ? 'text-white bg-amber-500/10' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                }`}>
                 🔍 {s}
               </button>
             ))}
@@ -854,6 +920,7 @@ function MultiCommentaryModal({ chapter, verse, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedCommentator, setSelectedCommentator] = useState(null);
+  const modalRef = useRef(null);
 
   const COMMENTATOR_LABELS = {
     adiShankaracharya: 'Adi Shankaracharya',
@@ -872,9 +939,16 @@ function MultiCommentaryModal({ chapter, verse, onClose }) {
     return () => ac.abort();
   }, [chapter, verse]);
 
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleEsc);
+    modalRef.current?.focus();
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-gradient-to-b from-gray-900/95 to-gray-950/95 border border-white/5 rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-label="Commentaries">
+      <div ref={modalRef} tabIndex={-1} className="bg-gradient-to-b from-gray-900/95 to-gray-950/95 border border-white/5 rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl shadow-black/50 outline-none">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div>
             <h2 className="text-white font-bold text-xl tracking-tight">{t('commentary.title', 'Commentaries')}</h2>
@@ -940,6 +1014,14 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [chapterVerses, setChapterVerses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleEsc);
+    modalRef.current?.focus();
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -953,8 +1035,8 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-gradient-to-b from-gray-900/95 to-gray-950/95 border border-white/5 rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-label="Chapter Browser">
+      <div ref={modalRef} tabIndex={-1} className="bg-gradient-to-b from-gray-900/95 to-gray-950/95 border border-white/5 rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl shadow-black/50 outline-none">
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div>
             <h2 className="text-white font-bold text-xl tracking-tight">{t('chapterBrowser.title')}</h2>
@@ -1288,6 +1370,7 @@ export default function App() {
   ];
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen flex flex-col bg-gray-950 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"/>
@@ -1451,5 +1534,6 @@ export default function App() {
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
     </div>
+    </ErrorBoundary>
   );
 }
