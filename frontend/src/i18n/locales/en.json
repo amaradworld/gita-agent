@@ -5,12 +5,27 @@
     "daily": "Daily",
     "journey": "Journey",
     "goals": "Goals",
-    "guidance": "Guidance",
-    "achievements": "Rewards"
+    "guidance": "Guide",
+    "achievements": "Rewards",
+    "search": "Search",
+    "community": "Community",
+    "more": "More",
+    "askKrishna": "Ask Krishna",
+    "journal": "Journal",
+    "moodCheckin": "Mood",
+    "quiz": "Quiz",
+    "learning": "Learn",
+    "meditation": "Meditate",
+    "verseCards": "Cards",
+    "characters": "Who Am I",
+    "calmMode": "Calm",
+    "stories": "Stories",
+    "debateMode": "Debate",
+    "bookmarks": "Bookmarks"
   },
   "chat": {
     "placeholder": "Share what's on your heart...",
-    "welcome": "Namaste! I am your Gita Gyan spiritual mentor. I can help you with:\n\n• Life guidance from the Bhagavad Gita\n• Understanding your emotions\n• Finding verses for your situation\n• Daily wisdom and meditation\n\nWhat would you like guidance on?",
+    "welcome": "Namaste! I am your Gita Gyan spiritual mentor. Ask me anything about life, emotions, or wisdom from the Bhagavad Gita.",
     "listening": "Listening... Speak now",
     "voiceNotSupported": "Voice recognition not supported in this browser. Try Chrome or Edge.",
     "voiceHttpsRequired": "Voice requires HTTPS. Please use HTTPS or localhost.",
@@ -56,19 +71,85 @@
     "achievements": "Achievements",
     "noAchievements": "Start reading verses to unlock achievements!"
   },
-  "commentary": {
-    "title": "Commentaries"
+  "commentary": { "title": "Commentaries" },
+  "askKrishna": {
+    "title": "Ask Krishna",
+    "subtitle": "Get structured wisdom for any question",
+    "placeholder": "Ask anything..."
+  },
+  "journal": {
+    "title": "Reflection Journal",
+    "subtitle": "Connect your day with Gita wisdom",
+    "save": "Save Reflection",
+    "saved": "Journal entry saved!",
+    "pastEntries": "Past Reflections"
+  },
+  "mood": {
+    "title": "How Are You Feeling?",
+    "subtitle": "Check in and get personalized guidance"
+  },
+  "quiz": {
+    "title": "Gita Quiz",
+    "subtitle": "Test your knowledge of the Bhagavad Gita",
+    "start": "Start Quiz",
+    "playAgain": "Play Again",
+    "complete": "Quiz Complete!"
+  },
+  "learning": {
+    "title": "Learning Paths",
+    "subtitle": "Structured courses to master Gita wisdom"
+  },
+  "meditation": {
+    "title": "Guided Meditation",
+    "subtitle": "Find peace with Gita-guided sessions"
+  },
+  "verseCards": {
+    "title": "Verse Cards",
+    "subtitle": "Create beautiful shareable cards",
+    "share": "Share Card"
+  },
+  "characters": {
+    "title": "Which Gita Character Are You?",
+    "subtitle": "Discover your spiritual archetype"
+  },
+  "calm": {
+    "title": "Emergency Calm",
+    "subtitle": "One tap to find peace"
+  },
+  "stories": {
+    "title": "Gita Stories",
+    "subtitle": "Learn wisdom through stories"
+  },
+  "debate": {
+    "title": "AI Debate Mode",
+    "subtitle": "Explore multiple perspectives",
+    "placeholder": "Enter a debate topic..."
+  },
+  "bookmarks": {
+    "title": "Bookmarks & Notes",
+    "subtitle": "Save your favorite verses"
+  },
+  "search": {
+    "title": "Search the Gita",
+    "subtitle": "Find wisdom across verses, topics, and life situations",
+    "placeholder": "Search verses, topics, emotions...",
+    "quickSearches": "Quick Searches",
+    "found": "Found",
+    "results": "results",
+    "noResults": "No results found. Try different keywords."
+  },
+  "community": {
+    "title": "Community",
+    "subtitle": "Share your spiritual journey anonymously",
+    "placeholder": "Share your reflection...",
+    "share": "Share Anonymously",
+    "posted": "Reflection shared!",
+    "noReflections": "Be the first to share a reflection!"
   },
   "chapterBrowser": {
     "title": "Bhagavad Gita",
     "chapters": "18 Chapters",
-    "verses": "700+ Verses",
-    "backToChapters": "← Back to chapters",
-    "loadingVerses": "Loading verses...",
-    "noVerses": "No verses available for this chapter yet.",
-    "readMore": "Click to read more",
-    "collapse": "Click to collapse",
-    "verseCount": "{{count}} verses"
+    "verses": "700+ Verses"
   },
   "emotions": {
     "anxiety": "anxiety",
@@ -77,25 +158,12 @@
     "loneliness": "loneliness",
     "anger": "anger",
     "confusion": "confusion",
-    "jealousy": "jealousy",
-    "selfDoubt": "self-doubt",
-    "guilt": "guilt",
     "fear": "fear",
     "love": "love",
-    "ego": "ego",
-    "money": "money",
-    "death": "death",
     "karma": "karma",
     "meditation": "meditation",
-    "surrender": "surrender",
-    "friendship": "friendship",
-    "patience": "patience",
-    "forgiveness": "forgiveness",
     "dharma": "dharma",
     "hope": "hope",
-    "wisdom": "wisdom",
-    "divine": "divine",
-    "desire": "desire",
-    "balance": "balance"
+    "wisdom": "wisdom"
   }
 }

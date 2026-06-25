@@ -32,6 +32,39 @@ import {
   recordTodayActivity,
   getGamificationSummary,
 } from '../gamification.js';
+import { enhancedSearch, getSearchSuggestions } from '../search.js';
+import {
+  getDailyPrompt,
+  createReflection,
+  getRecentReflections,
+  getReflectionsByDate,
+  likeReflection,
+  replyToReflection,
+  getCommunityStats,
+} from '../community.js';
+import {
+  generateKrishnaResponse,
+  addJournalEntry,
+  getJournalEntries,
+  recordMood,
+  getMoodHistory,
+  getMoodRecommendations,
+  startQuiz,
+  getNextQuestion,
+  answerQuiz,
+  LEARNING_PATHS,
+  MEDITATIONS,
+  CHARACTERS,
+  assessCharacter,
+  addBookmark,
+  removeBookmark,
+  getBookmarks,
+  getYesterdayContext,
+  getEmergencyCalmResponse,
+  getStory,
+  getDebateResponse,
+  STORIES,
+} from '../premium.js';
 
 // ─── DAILY VERSE ──────────────────────────────────────────
 router.get('/daily-verse', (req, res) => {
@@ -421,6 +454,377 @@ router.get('/search', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// ─── ENHANCED SEARCH ──────────────────────────────────────
+router.get('/search/enhanced', (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ error: 'Query must be at least 2 characters' });
+    }
+    const results = enhancedSearch(q, { limit: parseInt(limit) });
+    res.json({
+      query: q,
+      total: results.length,
+      results,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Enhanced search failed' });
+  }
+});
+
+router.get('/search/suggestions', (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) {
+      return res.json({ suggestions: [] });
+    }
+    const suggestions = getSearchSuggestions(q);
+    res.json({ suggestions });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+});
+
+// ─── COMMUNITY ────────────────────────────────────────────
+router.get('/community/prompt', (req, res) => {
+  try {
+    const prompt = getDailyPrompt();
+    res.json(prompt);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get daily prompt' });
+  }
+});
+
+router.get('/community/reflections', (req, res) => {
+  try {
+    const { limit = 20, offset = 0, date } = req.query;
+    let reflections;
+    if (date) {
+      reflections = getReflectionsByDate(date);
+    } else {
+      reflections = getRecentReflections(parseInt(limit), parseInt(offset));
+    }
+    res.json({ reflections, total: reflections.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get reflections' });
+  }
+});
+
+router.post('/community/reflections', (req, res) => {
+  try {
+    const { userId, verseKey, text, isAnonymous, mood } = req.body;
+    if (!userId || !text || text.trim().length === 0) {
+      return res.status(400).json({ error: 'userId and text are required' });
+    }
+    if (text.length > 500) {
+      return res.status(400).json({ error: 'Text must be 500 characters or less' });
+    }
+    const reflection = createReflection({
+      userId,
+      verseKey: verseKey || null,
+      text: text.trim(),
+      isAnonymous: isAnonymous !== false,
+      mood: mood || null,
+    });
+    res.json(reflection);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create reflection' });
+  }
+});
+
+router.post('/community/reflections/:id/like', (req, res) => {
+  try {
+    const reflection = likeReflection(req.params.id);
+    if (!reflection) {
+      return res.status(404).json({ error: 'Reflection not found' });
+    }
+    res.json(reflection);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to like reflection' });
+  }
+});
+
+router.post('/community/reflections/:id/reply', (req, res) => {
+  try {
+    const { userId, text, isAnonymous } = req.body;
+    if (!userId || !text || text.trim().length === 0) {
+      return res.status(400).json({ error: 'userId and text are required' });
+    }
+    if (text.length > 300) {
+      return res.status(400).json({ error: 'Reply must be 300 characters or less' });
+    }
+    const reply = replyToReflection(req.params.id, {
+      userId,
+      text: text.trim(),
+      isAnonymous: isAnonymous !== false,
+    });
+    if (!reply) {
+      return res.status(404).json({ error: 'Reflection not found' });
+    }
+    res.json(reply);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reply' });
+  }
+});
+
+router.get('/community/stats', (req, res) => {
+  try {
+    const stats = getCommunityStats();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get stats' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// PREMIUM FEATURES
+// ══════════════════════════════════════════════════════════════
+
+// ─── ASK KRISHNA MODE ────────────────────────────────────
+router.post('/ask-krishna', (req, res) => {
+  try {
+    const { message, lang = 'en' } = req.body;
+    if (!message) return res.status(400).json({ error: 'message required' });
+    const response = generateKrishnaResponse(message, lang);
+    res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: 'Ask Krishna failed' });
+  }
+});
+
+// ─── JOURNAL ──────────────────────────────────────────────
+router.post('/journal', (req, res) => {
+  try {
+    const { userId, happy, stressed, learned } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const entry = addJournalEntry(userId, { happy, stressed, learned });
+    res.json(entry);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save journal' });
+  }
+});
+
+router.get('/journal/:userId', (req, res) => {
+  try {
+    const entries = getJournalEntries(req.params.userId, parseInt(req.query.limit) || 30);
+    res.json({ entries, total: entries.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get journal' });
+  }
+});
+
+// ─── MOOD CHECK-IN ────────────────────────────────────────
+router.post('/mood/checkin', (req, res) => {
+  try {
+    const { userId, mood, note } = req.body;
+    if (!userId || !mood) return res.status(400).json({ error: 'userId and mood required' });
+    const entry = recordMood(userId, mood, note);
+    const recommendations = getMoodRecommendations(mood);
+    res.json({ entry, recommendations });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record mood' });
+  }
+});
+
+router.get('/mood/history/:userId', (req, res) => {
+  try {
+    const history = getMoodHistory(req.params.userId, parseInt(req.query.limit) || 30);
+    res.json({ history, total: history.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get mood history' });
+  }
+});
+
+// ─── QUIZ ─────────────────────────────────────────────────
+router.post('/quiz/start', (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const question = startQuiz(userId);
+    res.json(question);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to start quiz' });
+  }
+});
+
+router.post('/quiz/answer', (req, res) => {
+  try {
+    const { userId, answer } = req.body;
+    if (!userId || answer === undefined) return res.status(400).json({ error: 'userId and answer required' });
+    const result = answerQuiz(userId, parseInt(answer));
+    if (!result) return res.status(404).json({ error: 'No active quiz' });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to answer quiz' });
+  }
+});
+
+router.get('/quiz/question/:userId', (req, res) => {
+  try {
+    const question = getNextQuestion(req.params.userId);
+    if (!question) return res.status(404).json({ error: 'No active quiz' });
+    res.json(question);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get question' });
+  }
+});
+
+// ─── LEARNING PATH ────────────────────────────────────────
+router.get('/learning-paths', (req, res) => {
+  try {
+    const paths = Object.entries(LEARNING_PATHS).map(([key, path]) => ({ key, ...path }));
+    res.json({ paths });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get learning paths' });
+  }
+});
+
+router.get('/learning-paths/:key', (req, res) => {
+  try {
+    const path = LEARNING_PATHS[req.params.key];
+    if (!path) return res.status(404).json({ error: 'Learning path not found' });
+    res.json(path);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get learning path' });
+  }
+});
+
+// ─── GUIDED MEDITATION ────────────────────────────────────
+router.get('/meditations', (req, res) => {
+  try {
+    const meditations = Object.entries(MEDITATIONS).map(([key, med]) => ({
+      key,
+      title: med.title,
+      duration: med.duration,
+      stepCount: med.steps.length,
+    }));
+    res.json({ meditations });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get meditations' });
+  }
+});
+
+router.get('/meditations/:key', (req, res) => {
+  try {
+    const meditation = MEDITATIONS[req.params.key];
+    if (!meditation) return res.status(404).json({ error: 'Meditation not found' });
+    res.json(meditation);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get meditation' });
+  }
+});
+
+// ─── CHARACTER ASSESSMENT ──────────────────────────────────
+router.get('/characters', (req, res) => {
+  try {
+    const characters = Object.entries(CHARACTERS).map(([key, char]) => ({ key, ...char }));
+    res.json({ characters });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get characters' });
+  }
+});
+
+router.post('/characters/assess', (req, res) => {
+  try {
+    const { userId, answers } = req.body;
+    if (!userId || !answers || !Array.isArray(answers)) {
+      return res.status(400).json({ error: 'userId and answers array required' });
+    }
+    const result = assessCharacter(userId, answers);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to assess character' });
+  }
+});
+
+// ─── BOOKMARKS & NOTES ────────────────────────────────────
+router.post('/bookmarks', (req, res) => {
+  try {
+    const { userId, verseKey, note } = req.body;
+    if (!userId || !verseKey) return res.status(400).json({ error: 'userId and verseKey required' });
+    const bookmark = addBookmark(userId, verseKey, note || '');
+    res.json(bookmark);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add bookmark' });
+  }
+});
+
+router.delete('/bookmarks', (req, res) => {
+  try {
+    const { userId, verseKey } = req.body;
+    if (!userId || !verseKey) return res.status(400).json({ error: 'userId and verseKey required' });
+    const removed = removeBookmark(userId, verseKey);
+    res.json({ removed });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to remove bookmark' });
+  }
+});
+
+router.get('/bookmarks/:userId', (req, res) => {
+  try {
+    const bms = getBookmarks(req.params.userId);
+    res.json({ bookmarks: bms, total: bms.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get bookmarks' });
+  }
+});
+
+// ─── CONTINUE YESTERDAY ───────────────────────────────────
+router.get('/continue/:userId', (req, res) => {
+  try {
+    const context = getYesterdayContext(req.params.userId);
+    if (!context) return res.json({ hasContext: false });
+    res.json({ hasContext: true, ...context });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get yesterday context' });
+  }
+});
+
+// ─── EMERGENCY CALM MODE ──────────────────────────────────
+router.get('/emergency-calm', (req, res) => {
+  try {
+    const response = getEmergencyCalmResponse();
+    res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get calm response' });
+  }
+});
+
+// ─── STORY MODE ───────────────────────────────────────────
+router.get('/stories', (req, res) => {
+  try {
+    const stories = Object.entries(STORIES || {}).map(([key, s]) => ({
+      key,
+      title: s.title,
+      verse: s.verse,
+    }));
+    res.json({ stories });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get stories' });
+  }
+});
+
+router.get('/stories/:topic', (req, res) => {
+  try {
+    const story = getStory(req.params.topic);
+    res.json(story);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get story' });
+  }
+});
+
+// ─── DEBATE MODE ──────────────────────────────────────────
+router.post('/debate', (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) return res.status(400).json({ error: 'topic required' });
+    const response = getDebateResponse(topic);
+    res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get debate response' });
   }
 });
 

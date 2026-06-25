@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import SpeakingButton from './components/SpeakingButton';
+import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premium/AskKrishna';
+import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
 
 const API = '';
 
@@ -423,6 +425,313 @@ function ScenarioPage({ onSendMessage }) {
           onClose={() => setCommentaryVerse(null)}
         />
       )}
+    </div>
+  );
+}
+
+/* ─── SearchPage ─── */
+function SearchPage({ onSendMessage }) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleSearch = async (q) => {
+    if (!q || q.trim().length < 2) return;
+    setLoading(true);
+    setShowSuggestions(false);
+    try {
+      const res = await fetch(`${API}/api/mentor/search/enhanced?q=${encodeURIComponent(q)}&limit=10`);
+      const data = await res.json();
+      setResults(data);
+    } catch {
+      toast.error('Search failed');
+    }
+    setLoading(false);
+  };
+
+  const handleSuggestions = async (q) => {
+    if (q.length < 2) { setSuggestions([]); return; }
+    try {
+      const res = await fetch(`${API}/api/mentor/search/suggestions?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setSuggestions(data.suggestions || []);
+      setShowSuggestions(data.suggestions?.length > 0);
+    } catch {}
+  };
+
+  const quickSearches = [
+    { label: 'Stress relief', query: 'stress anxiety worry' },
+    { label: 'Anger management', query: 'anger rage frustration' },
+    { label: 'Finding purpose', query: 'purpose meaning life dharma' },
+    { label: 'Dealing with loss', query: 'death grief loss sadness' },
+    { label: 'Building confidence', query: 'confidence courage fear' },
+    { label: 'Meditation', query: 'meditation mind focus peace' },
+    { label: 'Karma yoga', query: 'karma action work duty' },
+    { label: 'Relationships', query: 'love relationships respect' },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-white mb-1">{t('search.title', 'Search the Gita')}</h2>
+        <p className="text-gray-500 text-sm">{t('search.subtitle', 'Find wisdom across verses, topics, and life situations')}</p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative mb-6">
+        <input
+          type="text"
+          value={query}
+          onChange={e => { setQuery(e.target.value); handleSuggestions(e.target.value); }}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearch(query); }}
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          placeholder={t('search.placeholder', 'Search verses, topics, emotions...')}
+          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all"
+        />
+        <button
+          onClick={() => handleSearch(query)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 flex items-center justify-center text-amber-400 transition-all"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+        {showSuggestions && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 py-2 z-50">
+            {suggestions.map((s, i) => (
+              <button key={i} onClick={() => { setQuery(s); handleSearch(s); setShowSuggestions(false); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                🔍 {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Quick Searches */}
+      {!results && (
+        <div className="mb-8">
+          <p className="text-gray-500 text-xs uppercase tracking-wider mb-3 font-bold">{t('search.quickSearches', 'Quick Searches')}</p>
+          <div className="flex flex-wrap gap-2">
+            {quickSearches.map((qs, i) => (
+              <button key={i} onClick={() => { setQuery(qs.query); handleSearch(qs.query); }}
+                className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-xs text-gray-400 hover:text-amber-300 hover:bg-amber-500/5 hover:border-amber-500/20 transition-all">
+                {qs.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Results */}
+      {loading && (
+        <div className="text-center py-8">
+          <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
+        </div>
+      )}
+
+      {results && !loading && (
+        <div>
+          <p className="text-gray-400 text-sm mb-4">
+            {t('search.found', 'Found')} {results.total} {t('search.results', 'results')} for "{results.query}"
+          </p>
+          <div className="space-y-3">
+            {results.results?.map((item, i) => (
+              <div key={i} className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border border-white/5 p-5 hover:border-amber-500/10 transition-all">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-amber-400 text-xs font-bold bg-amber-500/10 px-2 py-0.5 rounded-full">
+                    Ch. {item.chapter} · V. {item.verse}
+                  </span>
+                  <span className="text-gray-600 text-[10px]">Score: {item.score}</span>
+                  {item.scenarioData?.lifeArea && (
+                    <span className="text-gray-500 text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{item.scenarioData.lifeArea}</span>
+                  )}
+                </div>
+                {item.verseData?.translation && (
+                  <p className="text-amber-100 text-sm font-medium mb-1">"{item.verseData.translation}"</p>
+                )}
+                {item.scenarioData?.practicalAdvice && (
+                  <p className="text-gray-400 text-xs mt-1">{item.scenarioData.practicalAdvice}</p>
+                )}
+                {item.matchedTokens?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {item.matchedTokens.map((token, j) => (
+                      <span key={j} className="text-[9px] text-amber-500/60 bg-amber-500/5 px-1.5 py-0.5 rounded">{token}</span>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => onSendMessage(`Tell me about Chapter ${item.chapter}, Verse ${item.verse}`)}
+                  className="mt-3 text-amber-400 text-xs hover:text-amber-300 transition-colors"
+                >
+                  → Ask AI Mentor
+                </button>
+              </div>
+            ))}
+            {results.results?.length === 0 && (
+              <p className="text-center text-gray-500 py-8">{t('search.noResults', 'No results found. Try different keywords.')}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── CommunityPage ─── */
+function CommunityPage() {
+  const { t } = useTranslation();
+  const [prompt, setPrompt] = useState(null);
+  const [reflections, setReflections] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [newText, setNewText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API}/api/mentor/community/prompt`).then(r => r.json()),
+      fetch(`${API}/api/mentor/community/reflections?limit=20`).then(r => r.json()),
+      fetch(`${API}/api/mentor/community/stats`).then(r => r.json()),
+    ]).then(([promptData, reflectionsData, statsData]) => {
+      setPrompt(promptData);
+      setReflections(reflectionsData.reflections || []);
+      setStats(statsData);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const postReflection = async () => {
+    if (!newText.trim() || posting) return;
+    setPosting(true);
+    try {
+      const res = await fetch(`${API}/api/mentor/community/reflections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, text: newText.trim(), isAnonymous: true }),
+      });
+      const data = await res.json();
+      setReflections(prev => [data, ...prev]);
+      setNewText('');
+      toast.success(t('community.posted', 'Reflection shared!'));
+    } catch {
+      toast.error('Failed to post');
+    }
+    setPosting(false);
+  };
+
+  const likeReflection = async (id) => {
+    try {
+      const res = await fetch(`${API}/api/mentor/community/reflections/${id}/like`, { method: 'POST' });
+      const data = await res.json();
+      setReflections(prev => prev.map(r => r.id === id ? { ...r, likes: data.likes } : r));
+    } catch {}
+  };
+
+  if (loading) return (
+    <div className="text-center py-12">
+      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
+    </div>
+  );
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-white mb-1">{t('community.title', 'Community')}</h2>
+        <p className="text-gray-500 text-sm">{t('community.subtitle', 'Share your spiritual journey anonymously')}</p>
+      </div>
+
+      {/* Daily Prompt */}
+      {prompt && (
+        <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-2xl border border-amber-500/20 p-5 mb-6">
+          <p className="text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">Today's Reflection Prompt</p>
+          <p className="text-white text-lg font-medium">{prompt.emoji} {prompt.text}</p>
+        </div>
+      )}
+
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 text-center">
+            <p className="text-white font-bold text-lg">{stats.totalReflections}</p>
+            <p className="text-gray-500 text-[10px] uppercase">Reflections</p>
+          </div>
+          <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 text-center">
+            <p className="text-white font-bold text-lg">{stats.todayReflections}</p>
+            <p className="text-gray-500 text-[10px] uppercase">Today</p>
+          </div>
+          <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 text-center">
+            <p className="text-white font-bold text-lg">{stats.totalLikes}</p>
+            <p className="text-gray-500 text-[10px] uppercase">Likes</p>
+          </div>
+        </div>
+      )}
+
+      {/* New Reflection */}
+      <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 mb-6">
+        <textarea
+          value={newText}
+          onChange={e => setNewText(e.target.value)}
+          placeholder={t('community.placeholder', 'Share your reflection...')}
+          rows={3}
+          maxLength={500}
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all"
+        />
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-gray-600 text-xs">{newText.length}/500</span>
+          <button
+            onClick={postReflection}
+            disabled={!newText.trim() || posting}
+            className="px-4 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-medium transition-all disabled:opacity-30"
+          >
+            {posting ? '...' : t('community.share', 'Share Anonymously')}
+          </button>
+        </div>
+      </div>
+
+      {/* Reflections Feed */}
+      <div className="space-y-3">
+        {reflections.map(ref => (
+          <div key={ref.id} className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 hover:border-white/10 transition-all">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center text-xs">
+                🕉
+              </div>
+              <span className="text-gray-500 text-xs">{ref.userId}</span>
+              {ref.mood && <span className="text-[9px] text-amber-500/60 bg-amber-500/5 px-1.5 py-0.5 rounded">{ref.mood}</span>}
+              <span className="text-gray-600 text-[10px] ml-auto">{new Date(ref.createdAt).toLocaleDateString()}</span>
+            </div>
+            <p className="text-gray-200 text-sm leading-relaxed">{ref.text}</p>
+            {ref.verseKey && (
+              <p className="text-amber-500/60 text-[10px] mt-1">📖 Verse {ref.verseKey}</p>
+            )}
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
+              <button onClick={() => likeReflection(ref.id)}
+                className="flex items-center gap-1 text-gray-500 hover:text-amber-400 text-xs transition-colors">
+                ❤️ {ref.likes || 0}
+              </button>
+            </div>
+            {ref.replies?.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {ref.replies.map(reply => (
+                  <div key={reply.id} className="bg-white/5 rounded-xl p-2.5">
+                    <p className="text-gray-500 text-[10px]">{reply.userId}</p>
+                    <p className="text-gray-300 text-xs">{reply.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        {reflections.length === 0 && (
+          <p className="text-center text-gray-500 py-8">{t('community.noReflections', 'Be the first to share a reflection!')}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -922,12 +1231,32 @@ export default function App() {
     finally { setLoading(false); }
   };
 
-  const tabs = [
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  const mainTabs = [
     { key: 'chat', label: t('nav.chat', 'Chat'), icon: '💬' },
     { key: 'daily', label: t('nav.daily', 'Daily'), icon: '📖' },
+    { key: 'scenario', label: t('nav.guidance', 'Guide'), icon: '🌟' },
+    { key: 'community', label: t('nav.community', 'Community'), icon: '👥' },
+    { key: 'more', label: t('nav.more', 'More'), icon: '☰' },
+  ];
+
+  const moreItems = [
+    { key: 'ask-krishna', label: t('nav.askKrishna', 'Ask Krishna'), icon: '🙏' },
     { key: 'journey', label: t('nav.journey', 'Journey'), icon: '🔥' },
     { key: 'goals', label: t('nav.goals', 'Goals'), icon: '🎯' },
-    { key: 'scenario', label: t('nav.guidance', 'Guidance'), icon: '🌟' },
+    { key: 'search', label: t('nav.search', 'Search'), icon: '🔍' },
+    { key: 'quiz', label: t('nav.quiz', 'Quiz'), icon: '🧠' },
+    { key: 'mood', label: t('nav.moodCheckin', 'Mood'), icon: '😊' },
+    { key: 'journal', label: t('nav.journal', 'Journal'), icon: '📝' },
+    { key: 'learning', label: t('nav.learning', 'Learn'), icon: '📚' },
+    { key: 'meditation', label: t('nav.meditation', 'Meditate'), icon: '🧘' },
+    { key: 'verse-cards', label: t('nav.verseCards', 'Cards'), icon: '🎴' },
+    { key: 'characters', label: t('nav.characters', 'Characters'), icon: '🎭' },
+    { key: 'calm', label: t('nav.calmMode', 'Calm'), icon: '🫂' },
+    { key: 'stories', label: t('nav.stories', 'Stories'), icon: '📖' },
+    { key: 'debate', label: t('nav.debateMode', 'Debate'), icon: '⚖️' },
+    { key: 'bookmarks', label: t('nav.bookmarks', 'Bookmarks'), icon: '🔖' },
     { key: 'gamification', label: t('nav.achievements', 'Rewards'), icon: '🏆' },
   ];
 
@@ -972,16 +1301,18 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation - Bottom Bar Style */}
         <div className="max-w-2xl mx-auto px-5 pb-2 flex gap-1">
-          {tabs.map(tab => (
+          {mainTabs.map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => { if (tab.key === 'more') setShowMoreMenu(!showMoreMenu); else { setActiveTab(tab.key); setShowMoreMenu(false); } }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                activeTab === tab.key
+                activeTab === tab.key && tab.key !== 'more'
                   ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
+                  : showMoreMenu && tab.key === 'more'
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
               }`}
             >
               <span>{tab.icon}</span>
@@ -989,6 +1320,23 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        {/* More Menu Dropdown */}
+        {showMoreMenu && (
+          <div className="absolute top-full left-0 right-0 z-40 bg-gray-900/98 backdrop-blur-2xl border-t border-white/5 shadow-2xl shadow-black/50 animate-slide-down">
+            <div className="max-w-2xl mx-auto px-4 py-4">
+              <div className="grid grid-cols-4 gap-2">
+                {moreItems.map(item => (
+                  <button key={item.key} onClick={() => { setActiveTab(item.key); setShowMoreMenu(false); }}
+                    className="flex flex-col items-center gap-1 p-3 rounded-2xl hover:bg-white/5 transition-all">
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-[10px] text-gray-400 text-center leading-tight">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Content */}
@@ -1057,8 +1405,22 @@ export default function App() {
       {activeTab === 'daily' && <DailyVersePage onSpeak={speak} speakingId={speakingId} />}
       {activeTab === 'journey' && <JourneyPage />}
       {activeTab === 'goals' && <GoalsPage />}
+      {activeTab === 'search' && <SearchPage onSendMessage={sendMessage} />}
       {activeTab === 'scenario' && <ScenarioPage onSendMessage={sendMessage} />}
+      {activeTab === 'community' && <CommunityPage />}
       {activeTab === 'gamification' && <GamificationPage />}
+      {activeTab === 'ask-krishna' && <AskKrishnaPage />}
+      {activeTab === 'quiz' && <QuizPage />}
+      {activeTab === 'mood' && <MoodCheckinPage />}
+      {activeTab === 'journal' && <JournalPage />}
+      {activeTab === 'learning' && <LearningPathPage />}
+      {activeTab === 'meditation' && <MeditationPage />}
+      {activeTab === 'verse-cards' && <VerseCardPage />}
+      {activeTab === 'characters' && <CharacterPage />}
+      {activeTab === 'calm' && <CalmModePage />}
+      {activeTab === 'stories' && <StoryModePage />}
+      {activeTab === 'debate' && <DebateModePage />}
+      {activeTab === 'bookmarks' && <BookmarksPage />}
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
     </div>
