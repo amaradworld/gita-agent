@@ -299,6 +299,7 @@ function ScenarioPage({ onSendMessage }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [commentaryVerse, setCommentaryVerse] = useState(null);
 
   const quickTopics = [
     { key: 'stress', icon: '😰', label: 'Stress & Anxiety' },
@@ -397,16 +398,203 @@ function ScenarioPage({ onSendMessage }) {
                   <p className="text-gray-500 text-xs italic">"{item.commentary}"</p>
                 </div>
               )}
+              <div className="flex gap-3 mt-3">
               <button
                 onClick={() => onSendMessage(`Tell me about Chapter ${item.chapter}, Verse ${item.verse}`)}
-                className="mt-3 text-amber-400 text-xs hover:text-amber-300 transition-colors"
+                className="text-amber-400 text-xs hover:text-amber-300 transition-colors"
               >
-                → Ask AI Mentor about this verse
+                → Ask AI Mentor
               </button>
+              <button
+                onClick={() => setCommentaryVerse({ chapter: item.chapter, verse: item.verse })}
+                className="text-gray-500 text-xs hover:text-gray-300 transition-colors"
+              >
+                📚 View Commentaries
+              </button>
+              </div>
             </div>
           ))}
         </div>
       )}
+      {commentaryVerse && (
+        <MultiCommentaryModal
+          chapter={commentaryVerse.chapter}
+          verse={commentaryVerse.verse}
+          onClose={() => setCommentaryVerse(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── GamificationPage ─── */
+function GamificationPage() {
+  const { t } = useTranslation();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
+
+  useEffect(() => {
+    fetch(`${API}/api/mentor/gamification/${userId}`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div className="text-center py-12">
+      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
+    </div>
+  );
+
+  if (!data) return <p className="text-center text-gray-500 py-12">Could not load gamification data</p>;
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-white mb-1">{t('gamification.title', 'Achievements & Challenges')}</h2>
+        <p className="text-gray-500 text-sm">{t('gamification.subtitle', 'Track your spiritual milestones')}</p>
+      </div>
+
+      {/* Today's Challenges */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold">{t('gamification.dailyChallenges', "Today's Challenges")}</h3>
+          <span className="text-amber-400 text-sm font-bold">{data.completedChallenges}/{data.totalChallenges}</span>
+        </div>
+        <div className="space-y-2">
+          {data.dailyChallenges?.map((challenge, i) => (
+            <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+              challenge.completed
+                ? 'bg-amber-500/10 border-amber-500/20'
+                : 'bg-white/[0.02] border-white/5'
+            }`}>
+              <span className="text-xl">{challenge.icon}</span>
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${challenge.completed ? 'text-amber-200' : 'text-gray-300'}`}>{challenge.title}</p>
+                <p className="text-gray-500 text-xs">{challenge.description}</p>
+              </div>
+              <div className="text-right">
+                {challenge.completed ? (
+                  <span className="text-amber-400 text-xs font-bold">✓ +{challenge.reward}</span>
+                ) : (
+                  <span className="text-gray-600 text-xs">{challenge.reward}pts</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {data.todayReward > 0 && (
+          <div className="mt-3 text-center text-amber-400 text-sm font-bold">
+            🎉 +{data.todayReward} points earned today!
+          </div>
+        )}
+      </div>
+
+      {/* Achievements */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white font-semibold">{t('gamification.achievements', 'Achievements')}</h3>
+          <span className="text-amber-400 text-sm font-bold">{data.unlockedCount}/{data.totalAchievements}</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {data.achievements?.map((ach, i) => (
+            <div key={i} className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-xl border border-amber-500/20 p-3 text-center">
+              <span className="text-2xl">{ach.icon}</span>
+              <p className="text-amber-200 text-xs font-bold mt-1">{ach.title}</p>
+              <p className="text-gray-500 text-[10px] mt-0.5">{ach.description}</p>
+            </div>
+          ))}
+          {data.unlockedCount === 0 && (
+            <div className="col-span-full text-center py-8 text-gray-500 text-sm">
+              {t('gamification.noAchievements', 'Start reading verses to unlock achievements!')}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── MultiCommentaryModal ─── */
+function MultiCommentaryModal({ chapter, verse, onClose }) {
+  const { t } = useTranslation();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedCommentator, setSelectedCommentator] = useState(null);
+
+  const COMMENTATOR_LABELS = {
+    adiShankaracharya: 'Adi Shankaracharya',
+    swamiVivekananda: 'Swami Vivekananda',
+    iskcon: 'ISKCON (Prabhupada)',
+    chinmayananda: 'Swami Chinmayananda',
+    sivananda: 'Swami Sivananda',
+  };
+
+  useEffect(() => {
+    fetch(`${API}/api/mentor/commentary/${chapter}/${verse}`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [chapter, verse]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-gradient-to-b from-gray-900/95 to-gray-950/95 border border-white/5 rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+          <div>
+            <h2 className="text-white font-bold text-xl tracking-tight">{t('commentary.title', 'Commentaries')}</h2>
+            <p className="text-gray-500 text-xs mt-0.5">Chapter {chapter}, Verse {verse}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-thin">
+          {loading ? (
+            <div className="text-center py-8"><div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>
+          ) : data?.commentaries ? (
+            <>
+              {data.practicalAdvice && (
+                <div className="bg-amber-500/5 rounded-2xl p-4 border border-amber-500/10 mb-4">
+                  <p className="text-amber-200/80 text-sm"><span className="text-amber-400 font-bold">💡 </span>{data.practicalAdvice}</p>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {Object.entries(data.commentaries).map(([key, text]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedCommentator(selectedCommentator === key ? null : key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      selectedCommentator === key || !selectedCommentator
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    {COMMENTATOR_LABELS[key] || key}
+                  </button>
+                ))}
+              </div>
+              {Object.entries(data.commentaries).map(([key, text]) => {
+                if (selectedCommentator && selectedCommentator !== key) return null;
+                return (
+                  <div key={key} className="bg-white/[0.02] rounded-2xl border border-white/5 p-4">
+                    <p className="text-amber-400 text-xs font-bold mb-2 uppercase tracking-wider">{COMMENTATOR_LABELS[key] || key}</p>
+                    <p className="text-gray-300 text-sm leading-relaxed italic">"{text}"</p>
+                  </div>
+                );
+              })}
+              {data.modernApplication && (
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5 mt-4">
+                  <p className="text-gray-300 text-sm"><span className="text-gray-400 font-bold">🌍 </span>{data.modernApplication}</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-center text-gray-500 py-8">No commentary available for this verse</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -740,6 +928,7 @@ export default function App() {
     { key: 'journey', label: t('nav.journey', 'Journey'), icon: '🔥' },
     { key: 'goals', label: t('nav.goals', 'Goals'), icon: '🎯' },
     { key: 'scenario', label: t('nav.guidance', 'Guidance'), icon: '🌟' },
+    { key: 'gamification', label: t('nav.achievements', 'Rewards'), icon: '🏆' },
   ];
 
   return (
@@ -869,6 +1058,7 @@ export default function App() {
       {activeTab === 'journey' && <JourneyPage />}
       {activeTab === 'goals' && <GoalsPage />}
       {activeTab === 'scenario' && <ScenarioPage onSendMessage={sendMessage} />}
+      {activeTab === 'gamification' && <GamificationPage />}
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
     </div>

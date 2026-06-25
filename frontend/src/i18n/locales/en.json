@@ -5,7 +5,8 @@
     "daily": "Daily",
     "journey": "Journey",
     "goals": "Goals",
-    "guidance": "Guidance"
+    "guidance": "Guidance",
+    "achievements": "Rewards"
   },
   "chat": {
     "placeholder": "Share what's on your heart...",
@@ -47,6 +48,16 @@
     "title": "Life Guidance",
     "subtitle": "Find wisdom for your life situation",
     "placeholder": "Describe your situation..."
+  },
+  "gamification": {
+    "title": "Achievements & Challenges",
+    "subtitle": "Track your spiritual milestones",
+    "dailyChallenges": "Today's Challenges",
+    "achievements": "Achievements",
+    "noAchievements": "Start reading verses to unlock achievements!"
+  },
+  "commentary": {
+    "title": "Commentaries"
   },
   "chapterBrowser": {
     "title": "Bhagavad Gita",

@@ -8,7 +8,8 @@
     "daily": "दैनिक",
     "journey": "यात्रा",
     "goals": "लक्ष्य",
-    "guidance": "मार्गदर्शन"
+    "guidance": "मार्गदर्शन",
+    "achievements": "पुरस्कार"
   },
   "chat": {
     "placeholder": "अपने मन की बात साझा करें...",
@@ -50,6 +51,16 @@
     "title": "जीवन मार्गदर्शन",
     "subtitle": "अपनी जीवन स्थिति के लिए ज्ञान खोजें",
     "placeholder": "अपनी स्थिति बताएं..."
+  },
+  "gamification": {
+    "title": "उपलब्धियां और चुनौतियां",
+    "subtitle": "अपनी आध्यात्मिक उपलब्धियां ट्रैक करें",
+    "dailyChallenges": "आज की चुनौतियां",
+    "achievements": "उपलब्धियां",
+    "noAchievements": "उपलब्धियां अनलॉक करने के लिए श्लोक पढ़ना शुरू करें!"
+  },
+  "commentary": {
+    "title": "टिप्पणियां"
   },
   "chapterBrowser": {
     "title": "भगवद गीता",

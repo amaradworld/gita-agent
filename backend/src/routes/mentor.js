@@ -27,6 +27,11 @@ import {
 
 import { searchGitaBook } from '../gita.js';
 import { generateResponse } from '../llm.js';
+import {
+  getTodayStats,
+  recordTodayActivity,
+  getGamificationSummary,
+} from '../gamification.js';
 
 // ─── DAILY VERSE ──────────────────────────────────────────
 router.get('/daily-verse', (req, res) => {
@@ -306,6 +311,55 @@ router.post('/mentor', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Mentor session failed' });
+  }
+});
+
+// ─── GAMIFICATION ──────────────────────────────────────────
+router.get('/gamification/:userId', (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const profile = getOrCreateProfile(userId);
+    const streakData = getStreak(userId);
+    const summary = getGamificationSummary(userId, profile, streakData.count);
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get gamification data' });
+  }
+});
+
+router.post('/gamification/record', (req, res) => {
+  try {
+    const { userId, activity } = req.body;
+    if (!userId || !activity || !activity.type) {
+      return res.status(400).json({ error: 'userId and activity.type required' });
+    }
+    recordTodayActivity(userId, activity);
+    const profile = getOrCreateProfile(userId);
+    const streakData = getStreak(userId);
+    const summary = getGamificationSummary(userId, profile, streakData.count);
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to record activity' });
+  }
+});
+
+// ─── MULTI-COMMENTARY ──────────────────────────────────────
+router.get('/commentary/:chapter/:verse', (req, res) => {
+  try {
+    const key = `${req.params.chapter}.${req.params.verse}`;
+    const data = VERSE_SCENARIOS[key];
+    if (!data || !data.commentary) {
+      return res.status(404).json({ error: 'No commentary found for this verse' });
+    }
+    res.json({
+      verseKey: key,
+      commentaries: data.commentary,
+      lifeArea: data.lifeArea,
+      practicalAdvice: data.practicalAdvice,
+      modernApplication: data.modernApplication,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get commentary' });
   }
 });
 
