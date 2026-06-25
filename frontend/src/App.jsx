@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Component } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, Component } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import SpeakingButton from './components/SpeakingButton';
@@ -6,6 +6,27 @@ import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premiu
 import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
 
 const API = '';
+
+/* ─── Spinner (accessible) ─── */
+function Spinner({ label = 'Loading' }) {
+  return (
+    <div className="text-center py-12" role="status" aria-label={label}>
+      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto" aria-hidden="true"/>
+      <p className="text-gray-500 text-xs mt-2 sr-only">{label}</p>
+    </div>
+  );
+}
+
+/* ─── Skeleton (content placeholder) ─── */
+function Skeleton({ lines = 3, className = '' }) {
+  return (
+    <div className={`space-y-3 ${className}`} aria-hidden="true">
+      {Array.from({ length: lines }).map((_, i) => (
+        <div key={i} className="h-4 bg-white/5 rounded-lg animate-pulse" style={{ width: `${60 + Math.random() * 40}%` }} />
+      ))}
+    </div>
+  );
+}
 
 /* ─── useDebounce hook ─── */
 function useDebounce(callback, delay) {
@@ -73,8 +94,8 @@ const CHAPTER_NAMES = {
   18: { english: 'Moksha Sannyasa Yoga', subtitle: 'Yoga of Liberation' },
 };
 
-/* ─── VerseCard ─── */
-function VerseCard({ verse, onSpeak, speakingId }) {
+/* ─── VerseCard (memoized) ─── */
+const VerseCard = React.memo(function VerseCardInner({ verse, onSpeak, speakingId }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   if (!verse) return null;
@@ -107,7 +128,7 @@ function VerseCard({ verse, onSpeak, speakingId }) {
       </div>
     </div>
   );
-}
+});
 
 /* ─── DailyVersePage ─── */
 function DailyVersePage({ onSpeak, speakingId }) {
@@ -133,9 +154,7 @@ function DailyVersePage({ onSpeak, speakingId }) {
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-        </div>
+        <Spinner label="Loading daily verse" />
       ) : dailyVerse ? (
         <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-3xl border border-white/5 p-6 shadow-2xl">
           <div className="text-center mb-4">
@@ -182,11 +201,7 @@ function JourneyPage() {
     return () => ac.abort();
   }, []);
 
-  if (loading) return (
-    <div className="text-center py-12">
-      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-    </div>
-  );
+  if (loading) return <Spinner label="Loading progress" />;
 
   if (!progress) return <p className="text-center text-gray-500 py-12">Could not load progress</p>;
 
@@ -287,11 +302,7 @@ function GoalsPage() {
     }
   };
 
-  if (loading) return (
-    <div className="text-center py-12">
-      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-    </div>
-  );
+  if (loading) return <Spinner label="Loading goals" />;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
@@ -421,11 +432,7 @@ function ScenarioPage({ onSendMessage }) {
         ))}
       </div>
 
-      {loading && (
-        <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-        </div>
-      )}
+      {loading && <Spinner label="Searching scenarios" />}
 
       {results && !loading && (
         <div className="space-y-3">
@@ -611,11 +618,7 @@ function SearchPage({ onSendMessage }) {
       )}
 
       {/* Results */}
-      {loading && (
-        <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-        </div>
-      )}
+      {loading && <Spinner label="Searching" />}
 
       {results && !loading && (
         <div>
@@ -720,11 +723,7 @@ function CommunityPage() {
     } catch { /* silent */ }
   };
 
-  if (loading) return (
-    <div className="text-center py-12">
-      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-    </div>
-  );
+  if (loading) return <Spinner label="Loading reflections" />;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
@@ -839,11 +838,7 @@ function GamificationPage() {
     return () => ac.abort();
   }, []);
 
-  if (loading) return (
-    <div className="text-center py-12">
-      <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/>
-    </div>
-  );
+  if (loading) return <Spinner label="Loading achievements" />;
 
   if (!data) return <p className="text-center text-gray-500 py-12">Could not load gamification data</p>;
 
@@ -960,7 +955,7 @@ function MultiCommentaryModal({ chapter, verse, onClose }) {
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-thin">
           {loading ? (
-            <div className="text-center py-8"><div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>
+            <Spinner label="Loading commentaries" />
           ) : data?.commentaries ? (
             <>
               {data.practicalAdvice && (
@@ -1072,7 +1067,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
                   <p className="text-gray-500 text-xs">{CHAPTER_NAMES[selectedChapter]?.subtitle}</p>
                 </div>
               </div>
-              {loading ? <div className="text-center text-gray-500 py-12"><div className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div> : (
+              {loading ? <Spinner label="Loading verses" /> : (
                 <div className="space-y-2">
                   {chapterVerses.map(v => (
                     <button key={`${v.chapter}-${v.verse}`} onClick={() => { onSelectVerse(`Tell me about Chapter ${v.chapter}, Verse ${v.verse}`); onClose(); }}
@@ -1200,6 +1195,11 @@ export default function App() {
       return prev;
     });
   }, [i18n.language, t]);
+
+  // Set lang attribute on <html> for accessibility
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1341,6 +1341,19 @@ export default function App() {
   };
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => { setIsOffline(false); toast.success('Back online!'); };
+    const handleOffline = () => { setIsOffline(true); toast.error('You are offline. Some features may not work.'); };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const mainTabs = [
     { key: 'chat', label: t('nav.chat', 'Chat'), icon: '💬' },
@@ -1372,11 +1385,19 @@ export default function App() {
   return (
     <ErrorBoundary>
     <div className="min-h-screen flex flex-col bg-gray-950 relative overflow-hidden">
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"/>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"/>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-saffron-500/3 rounded-full blur-3xl"/>
       </div>
+
+      {/* Offline Banner */}
+      {isOffline && (
+        <div className="relative z-10 bg-red-500/10 border-b border-red-500/20 px-4 py-2 text-center">
+          <p className="text-red-400 text-xs font-medium">📡 You are offline. Some features may not work.</p>
+        </div>
+      )}
 
       {/* Header */}
       <header className="relative z-10 border-b border-white/5 bg-gray-950/80 backdrop-blur-2xl">
@@ -1452,7 +1473,7 @@ export default function App() {
       {/* Content */}
       {activeTab === 'chat' && (
         <>
-          <main className="flex-1 overflow-y-auto relative z-10 px-4 py-6 scrollbar-thin">
+          <main id="main-content" className="flex-1 overflow-y-auto relative z-10 px-4 py-6 scrollbar-thin">
             <div className="max-w-2xl mx-auto space-y-4">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>

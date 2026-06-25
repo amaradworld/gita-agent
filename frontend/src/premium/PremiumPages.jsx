@@ -18,7 +18,7 @@ export function LearningPathPage() {
     return () => ac.abort();
   }, []);
 
-  if (loading) return <div className="text-center py-12"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>;
+  if (loading) return <div className="text-center py-12" role="status" aria-label="Loading learning paths"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto" aria-hidden="true"/></div>;
 
   if (selected) return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
@@ -463,7 +463,7 @@ export function StoryModePage() {
     } catch { toast.error('Failed to load story'); }
   };
 
-  if (loading) return <div className="text-center py-12"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>;
+  if (loading) return <div className="text-center py-12" role="status" aria-label="Loading stories"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto" aria-hidden="true"/></div>;
 
   if (active) return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">

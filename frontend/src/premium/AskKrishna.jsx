@@ -233,7 +233,7 @@ export function MoodCheckinPage() {
         ))}
       </div>
 
-      {loading && <div className="text-center py-8"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>}
+      {loading && <div className="text-center py-8" role="status" aria-label="Loading mood recommendations"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto" aria-hidden="true"/></div>}
 
       {recommendations && !loading && (
         <div className="space-y-3 animate-slide-up">
@@ -345,19 +345,22 @@ export function QuizPage() {
     </div>
   );
 
-  if (quizState === 'result') return (
+  if (quizState === 'result') {
+    const pct = question?.totalQuestions ? (score / question.totalQuestions) : (score / 10);
+    return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in text-center">
-      <div className="text-6xl mb-4">{score >= 8 ? '🏆' : score >= 5 ? '⭐' : '📖'}</div>
+      <div className="text-6xl mb-4">{pct >= 0.8 ? '🏆' : pct >= 0.5 ? '⭐' : '📖'}</div>
       <h2 className="text-2xl font-bold text-white mb-2">{t('quiz.complete', 'Quiz Complete!')}</h2>
-      <p className="text-amber-400 text-4xl font-bold mb-2">{score}/10</p>
+      <p className="text-amber-400 text-4xl font-bold mb-2">{score}/{question?.totalQuestions || 10}</p>
       <p className="text-gray-500 text-sm mb-8">
-        {score >= 8 ? 'Excellent! You are a Gita scholar!' : score >= 5 ? 'Good job! Keep learning!' : 'Keep studying! The Gita rewards persistence.'}
+        {pct >= 0.8 ? 'Excellent! You are a Gita scholar!' : pct >= 0.5 ? 'Good job! Keep learning!' : 'Keep studying! The Gita rewards persistence.'}
       </p>
       <button onClick={startQuiz} className="px-8 py-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-medium">
         {t('quiz.playAgain', 'Play Again')} 🔄
       </button>
     </div>
-  );
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
