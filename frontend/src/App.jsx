@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import SpeakingButton from './components/SpeakingButton';
 import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premium/AskKrishna';
 import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
+import { isFirstVisit, markVisited, getUserId, getReadingStats, recordActivity, getStreak, updateStreak } from './lib/storage';
 
 const API = '';
 
@@ -192,14 +193,29 @@ function JourneyPage() {
   const { t } = useTranslation();
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
-  const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
+  const userId = getUserId();
 
   useEffect(() => {
+    // Build from localStorage (persistent)
+    const streak = getStreak(userId);
+    const stats = getReadingStats(userId);
+    const localProgress = {
+      streak: streak.count,
+      totalVersesRead: stats.versesRead.length,
+      totalChapters: stats.chaptersExplored.length,
+      totalSessions: stats.sessions,
+      progressPercent: Math.round((stats.chaptersExplored.length / 18) * 100),
+      favoriteVerses: stats.versesRead.slice(-5),
+      goals: [],
+    };
+    setProgress(localProgress);
+    setLoading(false);
+    // Try backend for fresh data
     const ac = new AbortController();
     fetch(`${API}/api/mentor/progress/${userId}`, { signal: ac.signal })
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(d => { setProgress(d); setLoading(false); })
-      .catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+      .then(d => { if (d) setProgress(d); })
+      .catch(() => {});
     return () => ac.abort();
   }, []);
 
@@ -1330,9 +1346,12 @@ export default function App() {
   };
 
   const MAX_MESSAGES = 100;
+  const MAX_MESSAGE_LENGTH = 500;
+  const [rateLimitWait, setRateLimitWait] = useState(0);
+
   const sendMessage = async (overrideMsg) => {
     const msg = overrideMsg || input.trim();
-    if (!msg || loading) return;
+    if (!msg || loading || rateLimitWait > 0) return;
     setInput('');
     setMessages(prev => {
       const updated = [...prev, { role: 'user', content: msg }];
@@ -1342,8 +1361,28 @@ export default function App() {
     setActiveTab('chat');
     try {
       const res = await fetch(`${API}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, lang: i18n.language }) });
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get('retry-after') || '60', 10);
+        setRateLimitWait(retryAfter);
+        const countdown = setInterval(() => {
+          setRateLimitWait(prev => {
+            if (prev <= 1) { clearInterval(countdown); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+        toast.error(`Rate limited. Wait ${retryAfter}s.`);
+        setMessages(prev => prev.slice(0, -1)); // remove the user message
+        setLoading(false);
+        return;
+      }
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
+      // Track activity for streak
+      if (data.verse) {
+        const verseKey = `${data.verse.chapter}.${data.verse.verse}`;
+        recordActivity(getUserId(), verseKey);
+        updateStreak(getUserId());
+      }
       setMessages(prev => {
         const updated = [...prev, { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions }];
         return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
@@ -1369,6 +1408,15 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Onboarding — show tooltip on first visit
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (isFirstVisit()) {
+      setShowOnboarding(true);
+      markVisited();
+    }
   }, []);
 
   const mainTabs = [
@@ -1412,6 +1460,35 @@ export default function App() {
       {isOffline && (
         <div className="relative z-10 bg-red-500/10 border-b border-red-500/20 px-4 py-2 text-center">
           <p className="text-red-400 text-xs font-medium">📡 You are offline. Some features may not work.</p>
+        </div>
+      )}
+
+      {/* Onboarding Tooltip — first visit only */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-end justify-center p-4 animate-fade-in" onClick={() => setShowOnboarding(false)}>
+          <div className="bg-gradient-to-b from-gray-900 to-gray-950 border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl shadow-amber-500/10 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="text-4xl mb-3">🕉</div>
+            <h3 className="text-white font-bold text-lg mb-2">Welcome to Gita Gyan</h3>
+            <p className="text-gray-400 text-sm mb-4">Your AI spiritual mentor. Ask anything about life, emotions, or wisdom from the Bhagavad Gita.</p>
+            <div className="space-y-2 text-left mb-4">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <span className="text-lg">💬</span><span>Chat with Krishna — ask anything</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <span className="text-lg">📖</span><span>Daily verse to start your day</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <span className="text-lg">🫂</span><span>Emergency Calm for stressful moments</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-300">
+                <span className="text-lg">☰</span><span>Tap <strong>More</strong> for 16+ features</span>
+              </div>
+            </div>
+            <button onClick={() => setShowOnboarding(false)}
+              className="w-full py-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-medium hover:scale-105 transition-all">
+              Start Exploring 🙏
+            </button>
+          </div>
         </div>
       )}
 
@@ -1526,17 +1603,28 @@ export default function App() {
 
           <footer className="relative z-10 border-t border-white/5 bg-gray-950/80 backdrop-blur-2xl px-4 py-3">
             <div className="max-w-2xl mx-auto">
+              {rateLimitWait > 0 && (
+                <div className="mb-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
+                  <p className="text-red-400 text-xs font-medium">⏱ Rate limited. Wait {rateLimitWait}s...</p>
+                </div>
+              )}
               <div className="flex items-end gap-2">
                 <MicButton isListening={isListening} onToggle={toggleVoice} />
                 {isListening && <VoiceWave active={isListening} />}
                 <div className="flex-1 relative">
                   <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                    placeholder={t('chat.placeholder')} rows={1}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all"
+                    placeholder={t('chat.placeholder')} rows={1} maxLength={MAX_MESSAGE_LENGTH}
+                    disabled={rateLimitWait > 0}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all disabled:opacity-50"
                     style={{ minHeight: '44px', maxHeight: '120px' }}
                     onInput={e => { e.target.style.height = '44px'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
+                  {input.length > 0 && (
+                    <span className={`absolute bottom-1 right-3 text-[10px] ${input.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-red-400' : 'text-gray-600'}`}>
+                      {input.length}/{MAX_MESSAGE_LENGTH}
+                    </span>
+                  )}
                 </div>
-                <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
+                <button onClick={() => sendMessage()} disabled={!input.trim() || loading || rateLimitWait > 0}
                   className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0 disabled:opacity-20 disabled:cursor-not-allowed bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-105 active:scale-95">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>

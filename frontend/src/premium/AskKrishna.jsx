@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { getJournalEntries, addJournalEntry, getMoodHistory, addMoodEntry } from '../lib/storage';
 const API = '';
 
 /* ═══════════════════════════════════════════════════════════
@@ -101,26 +102,39 @@ export function JournalPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // Load from localStorage first (persistent)
+    const local = getJournalEntries(userId);
+    if (local.length > 0) setEntries(local);
+    // Then try backend
     const ac = new AbortController();
-    fetch(`${API}/api/mentor/journal/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setEntries(d.entries || [])).catch(() => {});
+    fetch(`${API}/api/mentor/journal/${userId}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(d => { const server = d.entries || []; if (server.length > local.length) setEntries(server); })
+      .catch(() => {});
     return () => ac.abort();
   }, []);
 
   const save = async () => {
     if (!happy && !stressed && !learned) return;
     setSaving(true);
+    const entry = {
+      id: Date.now().toString(),
+      userId, happy, stressed, learned,
+      createdAt: new Date().toISOString(),
+    };
+    // Save to localStorage immediately
+    const updated = addJournalEntry(userId, entry);
+    setEntries(updated);
+    setHappy(''); setStressed(''); setLearned('');
+    toast.success(t('journal.saved', 'Journal entry saved!'));
+    // Try backend in background
     try {
-      const res = await fetch(`${API}/api/mentor/journal`, {
+      await fetch(`${API}/api/mentor/journal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, happy, stressed, learned }),
       });
-      if (!res.ok) throw new Error(res.status);
-      const entry = await res.json();
-      setEntries(prev => [entry, ...prev]);
-      setHappy(''); setStressed(''); setLearned('');
-      toast.success(t('journal.saved', 'Journal entry saved!'));
-    } catch { toast.error('Failed to save'); }
+    } catch { /* localStorage already saved */ }
     setSaving(false);
   };
 
@@ -183,8 +197,15 @@ export function MoodCheckinPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Load from localStorage first (persistent)
+    const local = getMoodHistory(userId);
+    if (local.length > 0) setHistory(local);
+    // Then try backend
     const ac = new AbortController();
-    fetch(`${API}/api/mentor/mood/history/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setHistory(d.history || [])).catch(() => {});
+    fetch(`${API}/api/mentor/mood/history/${userId}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(d => { const server = d.history || []; if (server.length > local.length) setHistory(server); })
+      .catch(() => {});
     return () => ac.abort();
   }, []);
 
@@ -209,8 +230,17 @@ export function MoodCheckinPage() {
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setRecommendations(data.recommendations);
-      setHistory(prev => [data.entry, ...prev]);
-    } catch { toast.error('Failed to record mood'); }
+      // Save to localStorage (persistent)
+      const entry = data.entry || { mood: mood.key, timestamp: new Date().toISOString() };
+      const updated = addMoodEntry(userId, entry);
+      setHistory(updated);
+    } catch {
+      // Still save to localStorage even if backend fails
+      const entry = { mood: mood.key, timestamp: new Date().toISOString(), id: Date.now().toString() };
+      const updated = addMoodEntry(userId, entry);
+      setHistory(updated);
+      toast.error('Failed to record mood');
+    }
     setLoading(false);
   };
 

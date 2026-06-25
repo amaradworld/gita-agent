@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { getBookmarks, addBookmark, removeBookmark } from '../lib/storage';
 const API = '';
 
 /* ═══════════════════════════════════════════════════════════
@@ -214,6 +215,85 @@ export function VerseCardPage() {
     }
   };
 
+  const downloadCard = async () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+
+      // Background gradient
+      const gradients = [
+        ['#f59e0b', '#ea580c', '#dc2626'],
+        ['#4f46e5', '#9333ea', '#ec4899'],
+        ['#14b8a6', '#06b6d4', '#3b82f6'],
+        ['#1f2937', '#111827', '#000000'],
+        ['#e11d48', '#ec4899', '#d946ef'],
+      ];
+      const colors = gradients[bg] || gradients[0];
+      const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
+      colors.forEach((c, i) => grad.addColorStop(i / (colors.length - 1), c));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1080, 1080);
+
+      // Om symbol
+      ctx.font = '120px serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText('🕉', 540, 200);
+
+      // Chapter/Verse
+      ctx.font = '28px -apple-system, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillText(`Chapter ${verseData.chapter}, Verse ${verseData.verse}`, 540, 300);
+
+      // Sanskrit
+      ctx.font = 'italic 24px serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      const sanskritLines = wrapText(ctx, verseData.sanskrit, 900);
+      sanskritLines.forEach((line, i) => ctx.fillText(line, 540, 360 + i * 35));
+
+      // Translation
+      ctx.font = '36px -apple-system, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      const transLines = wrapText(ctx, `"${verseData.translation}"`, 850);
+      transLines.forEach((line, i) => ctx.fillText(line, 540, 480 + i * 50));
+
+      // Footer
+      ctx.font = '18px -apple-system, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillText('Bhagavad Gita · Gita Gyan', 540, 1000);
+
+      // Download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gita-${verseData.chapter}.${verseData.verse}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Card downloaded!');
+      }, 'image/png');
+    } catch { toast.error('Failed to download'); }
+  };
+
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth) {
+        if (line) lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines.slice(0, 6); // max 6 lines
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
@@ -247,10 +327,16 @@ export function VerseCardPage() {
       )}
 
       {verseData && (
-        <button onClick={share}
-          className="w-full py-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-medium">
-          {t('verseCards.share', 'Share Card')} 📤
-        </button>
+        <div className="flex gap-3">
+          <button onClick={share}
+            className="flex-1 py-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-medium">
+            {t('verseCards.share', 'Share')} 📤
+          </button>
+          <button onClick={downloadCard}
+            className="flex-1 py-3 rounded-2xl bg-white/5 border border-white/10 text-white font-medium hover:bg-white/10 transition-all">
+            Download PNG 📥
+          </button>
+        </div>
       )}
     </div>
   );
@@ -582,37 +668,49 @@ export function BookmarksPage() {
   const [note, setNote] = useState('');
 
   useEffect(() => {
+    // Load from localStorage first (persistent)
+    const local = getBookmarks(userId);
+    if (local.length > 0) setBookmarks(local);
+    // Then try backend for fresh data
     const ac = new AbortController();
-    fetch(`${API}/api/mentor/bookmarks/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setBookmarks(d.bookmarks || [])).catch(() => {});
+    fetch(`${API}/api/mentor/bookmarks/${userId}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(d => {
+        const serverBm = d.bookmarks || [];
+        if (serverBm.length > local.length) setBookmarks(serverBm);
+      })
+      .catch(() => {});
     return () => ac.abort();
   }, []);
 
   const add = async () => {
     if (!verseKey.trim()) return;
+    const bm = { verseKey: verseKey.trim(), note, createdAt: new Date().toISOString(), id: Date.now().toString() };
+    // Save to localStorage immediately
+    const updated = addBookmark(userId, bm);
+    setBookmarks(updated);
+    setVerseKey(''); setNote('');
+    toast.success('Bookmark added!');
+    // Try backend in background
     try {
-      const res = await fetch(`${API}/api/mentor/bookmarks`, {
+      await fetch(`${API}/api/mentor/bookmarks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, verseKey: verseKey.trim(), note }),
+        body: JSON.stringify({ userId, verseKey: bm.verseKey, note }),
       });
-      if (!res.ok) throw new Error(res.status);
-      const bm = await res.json();
-      setBookmarks(prev => [bm, ...prev]);
-      setVerseKey(''); setNote('');
-      toast.success('Bookmark added!');
-    } catch { toast.error('Failed'); }
+    } catch { /* localStorage already saved */ }
   };
 
   const remove = async (vk) => {
+    const updated = removeBookmark(userId, vk);
+    setBookmarks(updated);
     try {
-      const res = await fetch(`${API}/api/mentor/bookmarks`, {
+      await fetch(`${API}/api/mentor/bookmarks`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, verseKey: vk }),
       });
-      if (!res.ok) throw new Error(res.status);
-      setBookmarks(prev => prev.filter(b => b.verseKey !== vk));
-    } catch { /* silent */ }
+    } catch { /* localStorage already saved */ }
   };
 
   return (
