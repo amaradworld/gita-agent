@@ -8,6 +8,12 @@ import { randomUUID } from 'crypto';
 import { generateResponse } from './llm.js';
 import ttsRouter from './tts.js';
 import mentorRouter from './routes/mentor.js';
+import authRouter from './routes/auth.js';
+import paymentsRouter from './routes/payments.js';
+import notificationsRouter from './routes/notifications.js';
+import sanskritRouter from './routes/sanskrit.js';
+import { requireAuth, optionalAuth } from './auth.js';
+import { isDbConnected, getChatHistory, saveChatHistory, cleanupOldSessions, logUsage, getUserUsageCount } from './db.js';
 import {
   gitaVerses, chapterNames, findVerseByChapterVerse,
   findVersesByChapter, isVerseRequest, isChapterRequest,
@@ -22,10 +28,15 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://gita-agent.vercel.app'
 // Security: Helmet
 app.use(helmet());
 
-// Security: CORS — restrict to known origins
+// Security: CORS — restrict to known origins (no localhost in production)
+const ALLOWED_ORIGINS = [FRONTEND_URL];
+if (process.env.NODE_ENV !== 'production') {
+  ALLOWED_ORIGINS.push('http://localhost:5173', 'http://localhost:3001');
+}
 app.use(cors({
-  origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3001'],
-  methods: ['GET', 'POST', 'DELETE'],
+  origin: ALLOWED_ORIGINS,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Security: Body parser with size limit (100KB)
@@ -69,14 +80,26 @@ const sessionLimiter = rateLimit({
 // TTS endpoint
 app.use('/api/tts', ttsRouter);
 
+// Auth routes
+app.use('/api/auth', authRouter);
+
+// Payment routes
+app.use('/api/payments', paymentsRouter);
+
+// Notification routes
+app.use('/api/notifications', notificationsRouter);
+
+// Sanskrit pronunciation
+app.use('/api/sanskrit', sanskritRouter);
+
 // Mentor routes — enhanced spiritual guidance
 app.use('/api/mentor', mentorRouter);
 
-// Chat history storage — bounded to 500 sessions max (LRU-style)
+// Chat history — in-memory fallback when DB not connected
 const MAX_SESSIONS = 500;
-const MAX_SESSIONS_PER_IP = 5; // Prevent one IP from exhausting all slots
+const MAX_SESSIONS_PER_IP = 5;
 const chatSessions = new Map();
-const sessionIPs = new Map(); // sessionId -> ip
+const sessionIPs = new Map();
 
 function cleanupSessions() {
   if (chatSessions.size > MAX_SESSIONS) {
@@ -95,14 +118,48 @@ function cleanupSessions() {
 // Security: Max message length
 const MAX_MESSAGE_LENGTH = 500;
 
-app.get('/health', (req, res) => {
+// Per-user rate limiting middleware
+async function userRateLimit(endpoint, maxPerMinute) {
+  return async (req, res, next) => {
+    const userId = req.userId || null;
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const dbConnected = isDbConnected();
+
+    if (dbConnected && userId) {
+      try {
+        const count = await getUserUsageCount(userId, endpoint, 60000);
+        if (count >= maxPerMinute) {
+          return res.status(429).json({ error: `Rate limit: ${maxPerMinute} requests per minute` });
+        }
+        await logUsage(userId, ip, endpoint);
+      } catch {}
+    }
+    next();
+  };
+}
+
+app.get('/health', async (req, res) => {
+  const dbConnected = isDbConnected();
+  let sessionCount = 0;
+  if (dbConnected) {
+    try {
+      const { getDb } = await import('./db.js');
+      const db = getDb();
+      if (db) {
+        const { count } = await db.from('chat_sessions').select('id', { count: 'exact', head: true });
+        sessionCount = count || 0;
+      }
+    } catch {}
+  }
   res.json({
     status: 'ok',
-    service: 'Gita Agent',
+    service: 'Gita Gyan',
+    version: '2.0.0',
+    database: dbConnected ? 'connected' : 'not configured',
     verses: gitaVerses.length,
     chapters: Object.keys(chapterNames).length,
-    sessions: chatSessions.size,
-    features: ['daily-verse', 'scenarios', 'mood', 'streaks', 'goals', 'favorites', 'mentor', 'search'],
+    sessions: sessionCount,
+    features: ['daily-verse', 'scenarios', 'mood', 'streaks', 'goals', 'favorites', 'mentor', 'search', 'auth', 'payments', 'notifications'],
   });
 });
 
@@ -171,16 +228,27 @@ app.get('/api/search', (req, res) => {
 
 // ==================== CHAT ====================
 
-app.post('/api/session/new', sessionLimiter, (req, res) => {
-  cleanupSessions();
+app.post('/api/session/new', sessionLimiter, async (req, res) => {
   const sessionId = randomUUID();
   const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-  chatSessions.set(sessionId, []);
-  sessionIPs.set(sessionId, ip);
+  const userId = req.userId || null;
+
+  if (isDbConnected()) {
+    try {
+      await saveChatHistory(sessionId, [], userId, ip);
+    } catch {
+      chatSessions.set(sessionId, []);
+      sessionIPs.set(sessionId, ip);
+    }
+  } else {
+    cleanupSessions();
+    chatSessions.set(sessionId, []);
+    sessionIPs.set(sessionId, ip);
+  }
   res.json({ sessionId });
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', optionalAuth, async (req, res) => {
   try {
     const { message, sessionId = 'default', lang = 'en' } = req.body;
 
@@ -198,24 +266,43 @@ app.post('/api/chat', async (req, res) => {
       ? sessionId : 'default';
 
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const userId = req.userId || null;
 
-    if (!chatSessions.has(safeSessionId)) {
-      // Limit sessions per IP to prevent exhaustion attack
-      const ipSessionCount = [...sessionIPs.values()].filter(v => v === ip).length;
-      if (ipSessionCount >= MAX_SESSIONS_PER_IP && safeSessionId !== 'default') {
-        return res.status(429).json({ error: 'Too many sessions. Please refresh.' });
+    // Get history from DB or in-memory
+    let history = [];
+    if (isDbConnected()) {
+      try {
+        history = await getChatHistory(safeSessionId);
+      } catch {
+        history = chatSessions.get(safeSessionId) || [];
       }
-      cleanupSessions();
-      chatSessions.set(safeSessionId, []);
-      sessionIPs.set(safeSessionId, ip);
+    } else {
+      if (!chatSessions.has(safeSessionId)) {
+        const ipSessionCount = [...sessionIPs.values()].filter(v => v === ip).length;
+        if (ipSessionCount >= MAX_SESSIONS_PER_IP && safeSessionId !== 'default') {
+          return res.status(429).json({ error: 'Too many sessions. Please refresh.' });
+        }
+        cleanupSessions();
+        chatSessions.set(safeSessionId, []);
+        sessionIPs.set(safeSessionId, ip);
+      }
+      history = chatSessions.get(safeSessionId);
     }
-    const history = chatSessions.get(safeSessionId);
 
     const response = await generateResponse(trimmed, history, lang);
 
-    // Clone history to avoid race condition
-    const updated = [...history, { role: 'user', content: trimmed }, { role: 'assistant', content: response.message }];
-    chatSessions.set(safeSessionId, updated.slice(-20));
+    // Save updated history
+    const updated = [...history, { role: 'user', content: trimmed }, { role: 'assistant', content: response.message }].slice(-20);
+
+    if (isDbConnected()) {
+      try {
+        await saveChatHistory(safeSessionId, updated, userId, ip);
+      } catch {
+        chatSessions.set(safeSessionId, updated);
+      }
+    } else {
+      chatSessions.set(safeSessionId, updated);
+    }
 
     logger.info({ emotions: response.emotions, verse: `${response.verse.chapter}.${response.verse.verse}`, lang }, 'Chat response generated');
 
@@ -228,8 +315,17 @@ app.post('/api/chat', async (req, res) => {
 
 // ==================== GRACEFUL SHUTDOWN ====================
 
-const server = app.listen(PORT, () => {
-  logger.info(`Gita Agent running on port ${PORT} with ${gitaVerses.length} verses across 18 chapters`);
+const server = app.listen(PORT, async () => {
+  logger.info(`Gita Gyan v2.0 running on port ${PORT} with ${gitaVerses.length} verses across 18 chapters`);
+  logger.info(`Database: ${isDbConnected() ? 'Connected (Supabase)' : 'Not configured — using in-memory storage'}`);
+
+  // Cleanup old chat sessions on startup
+  if (isDbConnected()) {
+    try {
+      await cleanupOldSessions();
+      logger.info('Cleaned up old chat sessions');
+    } catch {}
+  }
 });
 
 process.on('SIGTERM', () => {
