@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo, Component } f
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import SpeakingButton from './components/SpeakingButton';
+import DynamicBackground from './components/DynamicBackground';
 import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premium/AskKrishna';
 import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
 import { isFirstVisit, markVisited, getUserId, getReadingStats, recordActivity, getStreak, updateStreak } from './lib/storage';
@@ -1119,16 +1120,22 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
 }
 
 /* ─── MicButton ─── */
-function MicButton({ isListening, onToggle }) {
+function MicButton({ isListening, onToggle, supported }) {
   const { t } = useTranslation();
+  const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  const isEnabled = SR && supported !== false;
+
   return (
     <button onClick={onToggle}
+      disabled={!isEnabled}
       className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0 ${
-        isListening
-          ? 'bg-gradient-to-br from-red-500 to-pink-600 shadow-lg shadow-red-500/30 scale-110'
-          : 'bg-gradient-to-br from-white/10 to-white/5 hover:from-white/15 hover:to-white/10 border border-white/10 hover:border-amber-500/30'
+        !isEnabled
+          ? 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed'
+          : isListening
+            ? 'bg-gradient-to-br from-red-500 to-pink-600 shadow-lg shadow-red-500/30 scale-110'
+            : 'bg-gradient-to-br from-white/10 to-white/5 hover:from-white/15 hover:to-white/10 border border-white/10 hover:border-amber-500/30'
       }`}
-      title={isListening ? t('chat.stop') : t('chat.listen')}>
+      title={!isEnabled ? t('chat.voiceNotSupported', 'Voice not supported in this browser') : isListening ? t('chat.stop', 'Stop listening') : t('chat.listen', 'Start voice input')}>
       {isListening && <><span className="absolute inset-0 rounded-2xl animate-ping bg-red-400 opacity-20"/><span className="absolute -inset-1 rounded-2xl animate-pulse bg-red-500 opacity-10"/></>}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="relative z-10">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
@@ -1212,6 +1219,7 @@ export default function App() {
   const [speakingId, setSpeakingId] = useState(null);
   const [showChapterBrowser, setShowChapterBrowser] = useState(false);
   const [autoRead, setAutoRead] = useState(false);
+  const [currentMood, setCurrentMood] = useState('default');
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
@@ -1234,13 +1242,17 @@ export default function App() {
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) {
+      console.warn('Speech Recognition not supported in this browser');
+      return;
+    }
 
     const recognition = new SR();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.lang = 'en-IN';
+    const langMap = { en:'en-IN', hi:'hi-IN', ta:'ta-IN', te:'te-IN', mr:'mr-IN', bn:'bn-IN', kn:'kn-IN', gu:'gu-IN', ml:'ml-IN' };
+    recognition.lang = langMap[i18n.language] || 'en-IN';
 
     recognition.onresult = (event) => {
       let final = '';
@@ -1261,7 +1273,13 @@ export default function App() {
 
     recognition.onerror = (event) => {
       console.error('Speech error:', event.error);
-      if (event.error === 'no-speech' || event.error === 'aborted') {
+      if (event.error === 'no-speech') {
+        toast(t('chat.noSpeech', 'No speech detected. Try again.'));
+        setIsListening(false);
+        isListeningRef.current = false;
+        return;
+      }
+      if (event.error === 'aborted') {
         if (isListeningRef.current) {
           setTimeout(() => {
             try { recognition.start(); } catch {}
@@ -1271,8 +1289,9 @@ export default function App() {
       }
       setIsListening(false);
       isListeningRef.current = false;
-      if (event.error === 'not-allowed') toast.error(t('chat.micDenied'));
-      else if (event.error !== 'aborted') toast.error(t('chat.voiceFailed'));
+      if (event.error === 'not-allowed') toast.error(t('chat.micDenied', 'Microphone access denied. Please allow mic access in browser settings.'));
+      else if (event.error === 'network') toast.error(t('chat.voiceNetwork', 'Network error. Check your connection.'));
+      else if (event.error !== 'aborted') toast.error(t('chat.voiceFailed', 'Voice recognition failed. Try again.'));
     };
 
     recognition.onend = () => {
@@ -1286,13 +1305,19 @@ export default function App() {
     };
 
     recognitionRef.current = recognition;
-  }, []);
+  }, [i18n.language, t]);
 
   const toggleVoice = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = recognitionRef.current;
     if (!rec) {
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') toast.error(t('chat.voiceHttpsRequired'));
-      else toast.error(t('chat.voiceNotSupported'));
+      if (!SR) {
+        toast.error(t('chat.voiceNotSupported', 'Voice not supported. Try Chrome or Edge browser.'));
+      } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        toast.error(t('chat.voiceHttpsRequired', 'Voice requires HTTPS. Use the deployed URL.'));
+      } else {
+        toast.error(t('chat.voiceFailed', 'Voice recognition failed. Try reloading the page.'));
+      }
       return;
     }
     if (isListeningRef.current) {
@@ -1306,10 +1331,10 @@ export default function App() {
         rec.start();
         isListeningRef.current = true;
         setIsListening(true);
-        toast(t('chat.listening'), { icon: '🎙️', duration: 2000 });
+        toast(t('chat.listening', 'Listening... Speak now!'), { icon: '🎙️', duration: 2000 });
       } catch (err) {
         console.error('Start error:', err);
-        toast.error('Could not start voice.');
+        toast.error(t('chat.voiceFailed', 'Could not start voice. Try reloading.'));
       }
     }
   }, [i18n.language, t]);
@@ -1371,6 +1396,14 @@ export default function App() {
     });
     setLoading(true);
     setActiveTab('chat');
+
+    // Detect mood from message for dynamic background
+    const lowerMsg = msg.toLowerCase();
+    if (/calm|peace|relax|serene|meditat/.test(lowerMsg)) setCurrentMood('peace');
+    else if (/stress|anxious|worried|nervous|tense/.test(lowerMsg)) setCurrentMood('energy');
+    else if (/sad|unhappy|depressed|lonely|grief|loss/.test(lowerMsg)) setCurrentMood('sad');
+    else if (/happy|joy|excited|grateful|blessed/.test(lowerMsg)) setCurrentMood('calm');
+    else setCurrentMood('default');
     try {
       const res = await fetch(`${API}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, lang: i18n.language }) });
       if (res.status === 429) {
@@ -1460,13 +1493,9 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <div className="min-h-screen flex flex-col bg-gray-950 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gray-950 relative">
       <a href="#main-content" className="skip-link">Skip to content</a>
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"/>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"/>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-saffron-500/3 rounded-full blur-3xl"/>
-      </div>
+      <DynamicBackground mood={currentMood} activeTab={activeTab} />
 
       {/* Offline Banner */}
       {isOffline && (
