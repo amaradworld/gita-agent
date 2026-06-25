@@ -83,10 +83,12 @@ function DailyVersePage({ onSpeak, speakingId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/daily-verse?lang=${i18n.language}`)
-      .then(r => r.json())
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/daily-verse?lang=${i18n.language}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(d => { setDailyVerse(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, [i18n.language]);
 
   return (
@@ -139,10 +141,12 @@ function JourneyPage() {
   const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/progress/${userId}`)
-      .then(r => r.json())
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/progress/${userId}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(d => { setProgress(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   if (loading) return (
@@ -218,27 +222,36 @@ function GoalsPage() {
   const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
 
   useEffect(() => {
+    const ac = new AbortController();
     Promise.all([
-      fetch(`${API}/api/mentor/goals`).then(r => r.json()),
-      fetch(`${API}/api/mentor/progress/${userId}`).then(r => r.json()),
+      fetch(`${API}/api/mentor/goals`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch(`${API}/api/mentor/progress/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
     ]).then(([goalsData, progressData]) => {
       setGoals(goalsData.goals || []);
       setUserGoals(progressData.goals || []);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   const toggleGoal = async (goalKey) => {
+    const prev = userGoals;
     const newGoals = userGoals.includes(goalKey)
       ? userGoals.filter(g => g !== goalKey)
       : [...userGoals, goalKey];
     setUserGoals(newGoals);
-    await fetch(`${API}/api/mentor/goals/set`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, goals: newGoals }),
-    });
-    toast.success(t('goals.saved', 'Goals saved!'));
+    try {
+      const res = await fetch(`${API}/api/mentor/goals/set`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, goals: newGoals }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      toast.success(t('goals.saved', 'Goals saved!'));
+    } catch {
+      setUserGoals(prev);
+      toast.error('Failed to save goals');
+    }
   };
 
   if (loading) return (
@@ -325,6 +338,7 @@ function ScenarioPage({ onSendMessage }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: term }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setResults(data);
     } catch {
@@ -437,6 +451,7 @@ function SearchPage({ onSendMessage }) {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const setTimeoutRef = useRef(null);
 
   const handleSearch = async (q) => {
     if (!q || q.trim().length < 2) return;
@@ -444,6 +459,7 @@ function SearchPage({ onSendMessage }) {
     setShowSuggestions(false);
     try {
       const res = await fetch(`${API}/api/mentor/search/enhanced?q=${encodeURIComponent(q)}&limit=10`);
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setResults(data);
     } catch {
@@ -456,6 +472,7 @@ function SearchPage({ onSendMessage }) {
     if (q.length < 2) { setSuggestions([]); return; }
     try {
       const res = await fetch(`${API}/api/mentor/search/suggestions?q=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setSuggestions(data.suggestions || []);
       setShowSuggestions(data.suggestions?.length > 0);
@@ -488,7 +505,7 @@ function SearchPage({ onSendMessage }) {
           onChange={e => { setQuery(e.target.value); handleSuggestions(e.target.value); }}
           onKeyDown={e => { if (e.key === 'Enter') handleSearch(query); }}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onBlur={() => { setTimeoutRef.current = setTimeout(() => setShowSuggestions(false), 200); }}
           placeholder={t('search.placeholder', 'Search verses, topics, emotions...')}
           className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all"
         />
@@ -503,7 +520,7 @@ function SearchPage({ onSendMessage }) {
         {showSuggestions && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 py-2 z-50">
             {suggestions.map((s, i) => (
-              <button key={i} onClick={() => { setQuery(s); handleSearch(s); setShowSuggestions(false); }}
+              <button key={i} onClick={() => { clearTimeout(setTimeoutRef.current); setQuery(s); handleSearch(s); setShowSuggestions(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
                 🔍 {s}
               </button>
@@ -594,16 +611,18 @@ function CommunityPage() {
   const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
 
   useEffect(() => {
+    const ac = new AbortController();
     Promise.all([
-      fetch(`${API}/api/mentor/community/prompt`).then(r => r.json()),
-      fetch(`${API}/api/mentor/community/reflections?limit=20`).then(r => r.json()),
-      fetch(`${API}/api/mentor/community/stats`).then(r => r.json()),
+      fetch(`${API}/api/mentor/community/prompt`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch(`${API}/api/mentor/community/reflections?limit=20`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch(`${API}/api/mentor/community/stats`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
     ]).then(([promptData, reflectionsData, statsData]) => {
       setPrompt(promptData);
       setReflections(reflectionsData.reflections || []);
       setStats(statsData);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   const postReflection = async () => {
@@ -615,6 +634,7 @@ function CommunityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, text: newText.trim(), isAnonymous: true }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setReflections(prev => [data, ...prev]);
       setNewText('');
@@ -628,9 +648,10 @@ function CommunityPage() {
   const likeReflection = async (id) => {
     try {
       const res = await fetch(`${API}/api/mentor/community/reflections/${id}/like`, { method: 'POST' });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setReflections(prev => prev.map(r => r.id === id ? { ...r, likes: data.likes } : r));
-    } catch {}
+    } catch { /* silent */ }
   };
 
   if (loading) return (
@@ -744,10 +765,12 @@ function GamificationPage() {
   const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/gamification/${userId}`)
-      .then(r => r.json())
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/gamification/${userId}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   if (loading) return (
@@ -841,10 +864,12 @@ function MultiCommentaryModal({ chapter, verse, onClose }) {
   };
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/commentary/${chapter}/${verse}`)
-      .then(r => r.json())
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/commentary/${chapter}/${verse}`, { signal: ac.signal })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, [chapter, verse]);
 
   return (
@@ -917,12 +942,14 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/chapters`).then(r => r.json()).then(d => { setChapters(d.chapters || []); setLoading(false); }).catch(() => { setLoading(false); });
+    const ac = new AbortController();
+    fetch(`${API}/api/chapters`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => { setChapters(d.chapters || []); setLoading(false); }).catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   const loadChapter = (num) => {
     setSelectedChapter(num); setLoading(true);
-    fetch(`${API}/api/chapters/${num}`).then(r => r.json()).then(d => { setChapterVerses(d.verses || []); setLoading(false); }).catch(() => setLoading(false));
+    fetch(`${API}/api/chapters/${num}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => { setChapterVerses(d.verses || []); setLoading(false); }).catch(() => { setLoading(false); setChapterVerses([]); });
   };
 
   return (

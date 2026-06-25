@@ -13,7 +13,9 @@ export function LearningPathPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/learning-paths`).then(r => r.json()).then(d => { setPaths(d.paths || []); setLoading(false); }).catch(() => setLoading(false));
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/learning-paths`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => { setPaths(d.paths || []); setLoading(false); }).catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   if (loading) return <div className="text-center py-12"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>;
@@ -69,11 +71,14 @@ export function MeditationPage() {
   const [active, setActive] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
+  const currentStepRef = useRef(0);
+  const [currentStepDisplay, setCurrentStepDisplay] = useState(0);
   const timerRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/meditations`).then(r => r.json()).then(d => setMeditations(d.meditations || [])).catch(() => {});
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/meditations`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setMeditations(d.meditations || [])).catch(() => {});
+    return () => ac.abort();
   }, []);
 
   useEffect(() => {
@@ -81,11 +86,11 @@ export function MeditationPage() {
       timerRef.current = setInterval(() => {
         setElapsed(prev => {
           const next = prev + 1;
-          // Check for step transitions
           const steps = active.steps || [];
           for (let i = steps.length - 1; i >= 0; i--) {
-            if (next >= steps[i].time && currentStep < i) {
-              setCurrentStep(i);
+            if (next >= steps[i].time && currentStepRef.current < i) {
+              currentStepRef.current = i;
+              setCurrentStepDisplay(i);
               break;
             }
           }
@@ -98,22 +103,26 @@ export function MeditationPage() {
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
-  }, [playing, active, currentStep]);
+  }, [playing, active]);
 
   const startMeditation = async (key) => {
-    const res = await fetch(`${API}/api/mentor/meditations/${key}`);
-    const data = await res.json();
-    setActive(data);
-    setElapsed(0);
-    setCurrentStep(0);
-    setPlaying(true);
+    try {
+      const res = await fetch(`${API}/api/mentor/meditations/${key}`);
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      setActive(data);
+      setElapsed(0);
+      currentStepRef.current = 0;
+      setCurrentStepDisplay(0);
+      setPlaying(true);
+    } catch { toast.error('Failed to load meditation'); }
   };
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   if (active) return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in text-center">
-      <button onClick={() => { setPlaying(false); setActive(null); }} className="text-amber-400 text-xs mb-8 hover:text-amber-300">← Back</button>
+      <button onClick={() => { setPlaying(false); setActive(null); currentStepRef.current = 0; setCurrentStepDisplay(0); }} className="text-amber-400 text-xs mb-8 hover:text-amber-300">← Back</button>
 
       {/* Breathing Circle */}
       <div className="relative w-48 h-48 mx-auto mb-8">
@@ -129,11 +138,11 @@ export function MeditationPage() {
       </div>
 
       {/* Current Step */}
-      {active.steps?.[currentStep] && (
+      {active.steps?.[currentStepDisplay] && (
         <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-6 mb-6">
-          <p className="text-white text-lg leading-relaxed">{active.steps[currentStep].text}</p>
-          {active.steps[currentStep].verse && (
-            <p className="text-amber-400 text-xs mt-2">📖 Verse {active.steps[currentStep].verse}</p>
+          <p className="text-white text-lg leading-relaxed">{active.steps[currentStepDisplay].text}</p>
+          {active.steps[currentStepDisplay].verse && (
+            <p className="text-amber-400 text-xs mt-2">📖 Verse {active.steps[currentStepDisplay].verse}</p>
           )}
         </div>
       )}
@@ -189,6 +198,7 @@ export function VerseCardPage() {
     const [ch, v] = verseNum.split('.');
     try {
       const res = await fetch(`${API}/api/verses/${ch}/${v}`);
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setVerseData(data);
     } catch { toast.error('Verse not found'); }
@@ -275,7 +285,7 @@ export function CharacterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, answers: newAnswers }),
-      }).then(r => r.json()).then(d => setResult(d)).catch(() => toast.error('Assessment failed'));
+      }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setResult(d)).catch(() => toast.error('Assessment failed'));
     }
   };
 
@@ -341,6 +351,7 @@ export function CalmModePage() {
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/mentor/emergency-calm`);
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setCalm(data);
     } catch { toast.error('Failed'); }
@@ -363,6 +374,12 @@ export function CalmModePage() {
     cycle();
   };
 
+  const stopBreathing = () => {
+    setBreathActive(false);
+    setBreathPhase('');
+    clearTimeout(breathTimer.current);
+  };
+
   useEffect(() => () => clearTimeout(breathTimer.current), []);
 
   if (!calm) return (
@@ -379,7 +396,7 @@ export function CalmModePage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in text-center">
-      <button onClick={() => { setCalm(null); setBreathActive(false); clearTimeout(breathTimer.current); }} className="text-amber-400 text-xs mb-6">← Back</button>
+      <button onClick={() => { setCalm(null); stopBreathing(); }} className="text-amber-400 text-xs mb-6">← Back</button>
 
       {/* Breathing Animation */}
       <div className="relative w-48 h-48 mx-auto mb-8">
@@ -432,13 +449,18 @@ export function StoryModePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/stories`).then(r => r.json()).then(d => { setStories(d.stories || []); setLoading(false); }).catch(() => setLoading(false));
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/stories`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => { setStories(d.stories || []); setLoading(false); }).catch(e => { if (e.name !== 'AbortError') setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   const loadStory = async (key) => {
-    const res = await fetch(`${API}/api/mentor/stories/${key}`);
-    const data = await res.json();
-    setActive(data);
+    try {
+      const res = await fetch(`${API}/api/mentor/stories/${key}`);
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      setActive(data);
+    } catch { toast.error('Failed to load story'); }
   };
 
   if (loading) return <div className="text-center py-12"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto"/></div>;
@@ -493,6 +515,7 @@ export function DebateModePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setResult(data);
     } catch { toast.error('Failed'); }
@@ -559,7 +582,9 @@ export function BookmarksPage() {
   const [note, setNote] = useState('');
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/bookmarks/${userId}`).then(r => r.json()).then(d => setBookmarks(d.bookmarks || [])).catch(() => {});
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/bookmarks/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setBookmarks(d.bookmarks || [])).catch(() => {});
+    return () => ac.abort();
   }, []);
 
   const add = async () => {
@@ -570,6 +595,7 @@ export function BookmarksPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, verseKey: verseKey.trim(), note }),
       });
+      if (!res.ok) throw new Error(res.status);
       const bm = await res.json();
       setBookmarks(prev => [bm, ...prev]);
       setVerseKey(''); setNote('');
@@ -579,13 +605,14 @@ export function BookmarksPage() {
 
   const remove = async (vk) => {
     try {
-      await fetch(`${API}/api/mentor/bookmarks`, {
+      const res = await fetch(`${API}/api/mentor/bookmarks`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, verseKey: vk }),
       });
+      if (!res.ok) throw new Error(res.status);
       setBookmarks(prev => prev.filter(b => b.verseKey !== vk));
-    } catch {}
+    } catch { /* silent */ }
   };
 
   return (

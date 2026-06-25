@@ -21,6 +21,7 @@ export function AskKrishnaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: input, lang: i18n.language }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setResponse(data);
     } catch { toast.error('Failed to ask Krishna'); }
@@ -100,7 +101,9 @@ export function JournalPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/journal/${userId}`).then(r => r.json()).then(d => setEntries(d.entries || [])).catch(() => {});
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/journal/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setEntries(d.entries || [])).catch(() => {});
+    return () => ac.abort();
   }, []);
 
   const save = async () => {
@@ -112,6 +115,7 @@ export function JournalPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, happy, stressed, learned }),
       });
+      if (!res.ok) throw new Error(res.status);
       const entry = await res.json();
       setEntries(prev => [entry, ...prev]);
       setHappy(''); setStressed(''); setLearned('');
@@ -179,7 +183,9 @@ export function MoodCheckinPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/mentor/mood/history/${userId}`).then(r => r.json()).then(d => setHistory(d.history || [])).catch(() => {});
+    const ac = new AbortController();
+    fetch(`${API}/api/mentor/mood/history/${userId}`, { signal: ac.signal }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => setHistory(d.history || [])).catch(() => {});
+    return () => ac.abort();
   }, []);
 
   const moods = [
@@ -200,6 +206,7 @@ export function MoodCheckinPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, mood: mood.key }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setRecommendations(data.recommendations);
       setHistory(prev => [data.entry, ...prev]);
@@ -296,6 +303,7 @@ export function QuizPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setQuestion(data);
       setQuizState('playing');
@@ -310,6 +318,7 @@ export function QuizPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, answer: idx }),
       });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       setFeedback({ correct: data.correct, correctAnswer: data.correctAnswer });
       setScore(data.score);

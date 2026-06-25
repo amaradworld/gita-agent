@@ -25,11 +25,19 @@ app.use(helmet());
 // Security: CORS — restrict to known origins
 app.use(cors({
   origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3001'],
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'DELETE'],
 }));
 
 // Security: Body parser with size limit (100KB)
 app.use(express.json({ limit: '100kb' }));
+
+// Security: Sanitize userId from localStorage — strip non-safe chars
+app.use((req, res, next) => {
+  if (req.body && typeof req.body.userId === 'string') {
+    req.body.userId = req.body.userId.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 100);
+  }
+  next();
+});
 
 // Security: Rate limiting — 30 requests per minute per IP
 const limiter = rateLimit({
