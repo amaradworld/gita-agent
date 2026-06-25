@@ -8,6 +8,13 @@ import { isFirstVisit, markVisited, getUserId, getReadingStats, recordActivity, 
 
 const API = '';
 
+/* ─── Anonymous display name from userId hash ─── */
+function getDisplayName(userId) {
+  if (!userId || userId === 'guest-default') return 'Seeker #1';
+  const hash = userId.split('').reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0);
+  return `Seeker #${Math.abs(hash) % 9999 + 1}`;
+}
+
 /* ─── Spinner (accessible) ─── */
 function Spinner({ label = 'Loading' }) {
   return (
@@ -49,7 +56,7 @@ class ErrorBoundary extends Component {
           <div>
             <p className="text-4xl mb-4">🕉</p>
             <h2 className="text-white font-bold text-lg mb-2">Something went wrong</h2>
-            <p className="text-gray-500 text-sm mb-4">An unexpected error occurred.</p>
+            <p className="text-gray-400 text-sm mb-4">An unexpected error occurred.</p>
             <button onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
               className="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 text-sm hover:bg-amber-500/30 transition-all">
               Reload Page
@@ -124,7 +131,7 @@ const VerseCard = React.memo(function VerseCardInner({ verse, onSpeak, speakingI
               <p className="text-gray-400 text-xs leading-relaxed">{verse.explanation}</p>
             </div>
           )}
-          <p className="text-amber-500/50 text-[10px] mt-2 tracking-wide">{expanded ? '▲ COLLAPSE' : '▼ READ MORE'}</p>
+          <p className="text-amber-400/60 text-[10px] mt-2 tracking-wide">{expanded ? '▲ COLLAPSE' : '▼ READ MORE'}</p>
         </div>
       </div>
     </div>
@@ -151,7 +158,7 @@ function DailyVersePage({ onSpeak, speakingId }) {
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-amber-500/20 animate-float">🕉</div>
         <h2 className="text-2xl font-bold text-white mb-1">{t('dailyVerse.title', 'Daily Verse')}</h2>
-        <p className="text-gray-500 text-sm">{t('dailyVerse.subtitle', 'Start your day with divine wisdom')}</p>
+        <p className="text-gray-400 text-sm">{t('dailyVerse.subtitle', 'Start your day with divine wisdom')}</p>
       </div>
 
       {loading ? (
@@ -182,7 +189,7 @@ function DailyVersePage({ onSpeak, speakingId }) {
           )}
         </div>
       ) : (
-        <p className="text-center text-gray-500">Could not load daily verse</p>
+        <p className="text-center text-gray-400">Could not load daily verse</p>
       )}
     </div>
   );
@@ -221,7 +228,7 @@ function JourneyPage() {
 
   if (loading) return <Spinner label="Loading progress" />;
 
-  if (!progress) return <p className="text-center text-gray-500 py-12">Could not load progress</p>;
+  if (!progress) return <p className="text-center text-gray-400 py-12">Could not load progress</p>;
 
   const stats = [
     { label: t('journey.streak', 'Day Streak'), value: progress.streak, icon: '🔥', color: 'from-orange-500 to-red-500' },
@@ -234,7 +241,7 @@ function JourneyPage() {
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-1">{t('journey.title', 'Your Spiritual Journey')}</h2>
-        <p className="text-gray-500 text-sm">{t('journey.subtitle', 'Track your progress and build consistency')}</p>
+        <p className="text-gray-400 text-sm">{t('journey.subtitle', 'Track your progress and build consistency')}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-8">
@@ -242,7 +249,7 @@ function JourneyPage() {
           <div key={i} className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-2xl border border-white/5 p-4 text-center">
             <div className="text-2xl mb-1">{stat.icon}</div>
             <div className="text-2xl font-bold text-white">{stat.value}</div>
-            <div className="text-gray-500 text-xs mt-0.5">{stat.label}</div>
+            <div className="text-gray-400 text-xs mt-0.5">{stat.label}</div>
           </div>
         ))}
       </div>
@@ -259,7 +266,7 @@ function JourneyPage() {
             style={{ width: `${progress.progressPercent}%` }}
           />
         </div>
-        <p className="text-gray-500 text-xs mt-2">{progress.totalChapters} of 18 chapters explored</p>
+        <p className="text-gray-400 text-xs mt-2">{progress.totalChapters} of 18 chapters explored</p>
       </div>
 
       {/* Favorites */}
@@ -326,7 +333,7 @@ function GoalsPage() {
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-1">{t('goals.title', 'Spiritual Goals')}</h2>
-        <p className="text-gray-500 text-sm">{t('goals.subtitle', 'Set goals to guide your practice')}</p>
+        <p className="text-gray-400 text-sm">{t('goals.subtitle', 'Set goals to guide your practice')}</p>
       </div>
 
       <div className="space-y-3">
@@ -413,7 +420,7 @@ function ScenarioPage({ onSendMessage }) {
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-1">{t('scenario.title', 'Life Guidance')}</h2>
-        <p className="text-gray-500 text-sm">{t('scenario.subtitle', 'Find wisdom for your life situation')}</p>
+        <p className="text-gray-400 text-sm">{t('scenario.subtitle', 'Find wisdom for your life situation')}</p>
       </div>
 
       <div className="mb-6">
@@ -462,7 +469,7 @@ function ScenarioPage({ onSendMessage }) {
                 <span className="text-amber-400 text-xs font-bold bg-amber-500/10 px-2 py-0.5 rounded-full">
                   Ch. {item.chapter} · V. {item.verse}
                 </span>
-                <span className="text-gray-500 text-xs">{item.lifeArea}</span>
+                <span className="text-gray-400 text-xs">{item.lifeArea}</span>
               </div>
               <p className="text-amber-100 text-sm font-medium mb-2">{item.practicalAdvice}</p>
               {item.modernApplication && (
@@ -470,7 +477,7 @@ function ScenarioPage({ onSendMessage }) {
               )}
               {item.commentary && (
                 <div className="mt-3 pt-3 border-t border-white/5">
-                  <p className="text-gray-500 text-xs italic">"{item.commentary}"</p>
+                  <p className="text-gray-400 text-xs italic">"{item.commentary}"</p>
                 </div>
               )}
               <div className="flex gap-3 mt-3">
@@ -482,7 +489,7 @@ function ScenarioPage({ onSendMessage }) {
               </button>
               <button
                 onClick={() => setCommentaryVerse({ chapter: item.chapter, verse: item.verse })}
-                className="text-gray-500 text-xs hover:text-gray-300 transition-colors"
+                className="text-gray-400 text-xs hover:text-gray-300 transition-colors"
               >
                 📚 View Commentaries
               </button>
@@ -558,7 +565,7 @@ function SearchPage({ onSendMessage }) {
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-1">{t('search.title', 'Search the Gita')}</h2>
-        <p className="text-gray-500 text-sm">{t('search.subtitle', 'Find wisdom across verses, topics, and life situations')}</p>
+        <p className="text-gray-400 text-sm">{t('search.subtitle', 'Find wisdom across verses, topics, and life situations')}</p>
       </div>
 
       {/* Search Bar */}
@@ -624,7 +631,7 @@ function SearchPage({ onSendMessage }) {
       {/* Quick Searches */}
       {!results && (
         <div className="mb-8">
-          <p className="text-gray-500 text-xs uppercase tracking-wider mb-3 font-bold">{t('search.quickSearches', 'Quick Searches')}</p>
+          <p className="text-gray-400 text-xs uppercase tracking-wider mb-3 font-bold">{t('search.quickSearches', 'Quick Searches')}</p>
           <div className="flex flex-wrap gap-2">
             {quickSearches.map((qs, i) => (
               <button key={i} onClick={() => { setQuery(qs.query); handleSearch(qs.query); }}
@@ -651,9 +658,9 @@ function SearchPage({ onSendMessage }) {
                   <span className="text-amber-400 text-xs font-bold bg-amber-500/10 px-2 py-0.5 rounded-full">
                     Ch. {item.chapter} · V. {item.verse}
                   </span>
-                  <span className="text-gray-600 text-[10px]">Score: {item.score}</span>
+                  <span className="text-gray-400 text-[10px]">Score: {item.score}</span>
                   {item.scenarioData?.lifeArea && (
-                    <span className="text-gray-500 text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{item.scenarioData.lifeArea}</span>
+                    <span className="text-gray-400 text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{item.scenarioData.lifeArea}</span>
                   )}
                 </div>
                 {item.verseData?.translation && (
@@ -665,7 +672,7 @@ function SearchPage({ onSendMessage }) {
                 {item.matchedTokens?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {item.matchedTokens.map((token, j) => (
-                      <span key={j} className="text-[9px] text-amber-500/60 bg-amber-500/5 px-1.5 py-0.5 rounded">{token}</span>
+                      <span key={j} className="text-[9px] text-amber-400 bg-amber-500/5 px-1.5 py-0.5 rounded">{token}</span>
                     ))}
                   </div>
                 )}
@@ -678,7 +685,7 @@ function SearchPage({ onSendMessage }) {
               </div>
             ))}
             {results.results?.length === 0 && (
-              <p className="text-center text-gray-500 py-8">{t('search.noResults', 'No results found. Try different keywords.')}</p>
+              <p className="text-center text-gray-400 py-8">{t('search.noResults', 'No results found. Try different keywords.')}</p>
             )}
           </div>
         </div>
@@ -748,7 +755,7 @@ function CommunityPage() {
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-1">{t('community.title', 'Community')}</h2>
-        <p className="text-gray-500 text-sm">{t('community.subtitle', 'Share your spiritual journey anonymously')}</p>
+        <p className="text-gray-400 text-sm">{t('community.subtitle', 'Share your spiritual journey anonymously')}</p>
       </div>
 
       {/* Daily Prompt */}
@@ -764,15 +771,15 @@ function CommunityPage() {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 text-center">
             <p className="text-white font-bold text-lg">{stats.totalReflections}</p>
-            <p className="text-gray-500 text-[10px] uppercase">Reflections</p>
+            <p className="text-gray-400 text-[10px] uppercase">Reflections</p>
           </div>
           <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 text-center">
             <p className="text-white font-bold text-lg">{stats.todayReflections}</p>
-            <p className="text-gray-500 text-[10px] uppercase">Today</p>
+            <p className="text-gray-400 text-[10px] uppercase">Today</p>
           </div>
           <div className="bg-white/[0.02] rounded-xl border border-white/5 p-3 text-center">
             <p className="text-white font-bold text-lg">{stats.totalLikes}</p>
-            <p className="text-gray-500 text-[10px] uppercase">Likes</p>
+            <p className="text-gray-400 text-[10px] uppercase">Likes</p>
           </div>
         </div>
       )}
@@ -788,7 +795,7 @@ function CommunityPage() {
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all"
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-gray-600 text-xs">{newText.length}/500</span>
+          <span className="text-gray-400 text-xs">{newText.length}/500</span>
           <button
             onClick={postReflection}
             disabled={!newText.trim() || posting}
@@ -807,17 +814,17 @@ function CommunityPage() {
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center text-xs">
                 🕉
               </div>
-              <span className="text-gray-500 text-xs">{ref.userId}</span>
-              {ref.mood && <span className="text-[9px] text-amber-500/60 bg-amber-500/5 px-1.5 py-0.5 rounded">{ref.mood}</span>}
-              <span className="text-gray-600 text-[10px] ml-auto">{new Date(ref.createdAt).toLocaleDateString()}</span>
+              <span className="text-gray-400 text-xs">{getDisplayName(ref.userId)}</span>
+              {ref.mood && <span className="text-[9px] text-amber-400 bg-amber-500/5 px-1.5 py-0.5 rounded">{ref.mood}</span>}
+              <span className="text-gray-400 text-[10px] ml-auto">{new Date(ref.createdAt).toLocaleDateString()}</span>
             </div>
             <p className="text-gray-200 text-sm leading-relaxed">{ref.text}</p>
             {ref.verseKey && (
-              <p className="text-amber-500/60 text-[10px] mt-1">📖 Verse {ref.verseKey}</p>
+              <p className="text-amber-400 text-[10px] mt-1">📖 Verse {ref.verseKey}</p>
             )}
             <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
               <button onClick={() => likeReflection(ref.id)}
-                className="flex items-center gap-1 text-gray-500 hover:text-amber-400 text-xs transition-colors">
+                className="flex items-center gap-1 text-gray-400 hover:text-amber-400 text-xs transition-colors">
                 ❤️ {ref.likes || 0}
               </button>
             </div>
@@ -825,7 +832,7 @@ function CommunityPage() {
               <div className="mt-3 space-y-2">
                 {ref.replies.map(reply => (
                   <div key={reply.id} className="bg-white/5 rounded-xl p-2.5">
-                    <p className="text-gray-500 text-[10px]">{reply.userId}</p>
+                    <p className="text-gray-400 text-[10px]">{getDisplayName(reply.userId)}</p>
                     <p className="text-gray-300 text-xs">{reply.text}</p>
                   </div>
                 ))}
@@ -834,7 +841,7 @@ function CommunityPage() {
           </div>
         ))}
         {reflections.length === 0 && (
-          <p className="text-center text-gray-500 py-8">{t('community.noReflections', 'Be the first to share a reflection!')}</p>
+          <p className="text-center text-gray-400 py-8">{t('community.noReflections', 'Be the first to share a reflection!')}</p>
         )}
       </div>
     </div>
@@ -859,13 +866,13 @@ function GamificationPage() {
 
   if (loading) return <Spinner label="Loading achievements" />;
 
-  if (!data) return <p className="text-center text-gray-500 py-12">Could not load gamification data</p>;
+  if (!data) return <p className="text-center text-gray-400 py-12">Could not load gamification data</p>;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-1">{t('gamification.title', 'Achievements & Challenges')}</h2>
-        <p className="text-gray-500 text-sm">{t('gamification.subtitle', 'Track your spiritual milestones')}</p>
+        <p className="text-gray-400 text-sm">{t('gamification.subtitle', 'Track your spiritual milestones')}</p>
       </div>
 
       {/* Today's Challenges */}
@@ -884,13 +891,13 @@ function GamificationPage() {
               <span className="text-xl">{challenge.icon}</span>
               <div className="flex-1">
                 <p className={`text-sm font-medium ${challenge.completed ? 'text-amber-200' : 'text-gray-300'}`}>{challenge.title}</p>
-                <p className="text-gray-500 text-xs">{challenge.description}</p>
+                <p className="text-gray-400 text-xs">{challenge.description}</p>
               </div>
               <div className="text-right">
                 {challenge.completed ? (
                   <span className="text-amber-400 text-xs font-bold">✓ +{challenge.reward}</span>
                 ) : (
-                  <span className="text-gray-600 text-xs">{challenge.reward}pts</span>
+                  <span className="text-gray-400 text-xs">{challenge.reward}pts</span>
                 )}
               </div>
             </div>
@@ -911,14 +918,19 @@ function GamificationPage() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {data.achievements?.map((ach, i) => (
-            <div key={i} className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-xl border border-amber-500/20 p-3 text-center">
-              <span className="text-2xl">{ach.icon}</span>
-              <p className="text-amber-200 text-xs font-bold mt-1">{ach.title}</p>
+            <div key={i} className={`rounded-xl border p-3 text-center transition-all ${
+              ach.unlocked
+                ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/20 shadow-lg shadow-amber-500/5'
+                : 'bg-white/[0.02] border-white/5 opacity-50 grayscale'
+            }`}>
+              <span className={`text-2xl ${ach.unlocked ? '' : 'grayscale opacity-40'}`}>{ach.icon}</span>
+              <p className={`text-xs font-bold mt-1 ${ach.unlocked ? 'text-amber-200' : 'text-gray-500'}`}>{ach.title}</p>
               <p className="text-gray-500 text-[10px] mt-0.5">{ach.description}</p>
+              {!ach.unlocked && <p className="text-gray-600 text-[9px] mt-1">🔒 Locked</p>}
             </div>
           ))}
           {data.unlockedCount === 0 && (
-            <div className="col-span-full text-center py-8 text-gray-500 text-sm">
+            <div className="col-span-full text-center py-8 text-gray-400 text-sm">
               {t('gamification.noAchievements', 'Start reading verses to unlock achievements!')}
             </div>
           )}
@@ -966,7 +978,7 @@ function MultiCommentaryModal({ chapter, verse, onClose }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div>
             <h2 className="text-white font-bold text-xl tracking-tight">{t('commentary.title', 'Commentaries')}</h2>
-            <p className="text-gray-500 text-xs mt-0.5">Chapter {chapter}, Verse {verse}</p>
+            <p className="text-gray-400 text-xs mt-0.5">Chapter {chapter}, Verse {verse}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1013,7 +1025,7 @@ function MultiCommentaryModal({ chapter, verse, onClose }) {
               )}
             </>
           ) : (
-            <p className="text-center text-gray-500 py-8">No commentary available for this verse</p>
+            <p className="text-center text-gray-400 py-8">No commentary available for this verse</p>
           )}
         </div>
       </div>
@@ -1054,7 +1066,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
           <div>
             <h2 className="text-white font-bold text-xl tracking-tight">{t('chapterBrowser.title')}</h2>
-            <p className="text-gray-500 text-xs mt-0.5">18 Chapters · 700 Verses</p>
+            <p className="text-gray-400 text-xs mt-0.5">18 Chapters · 700 Verses</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1070,9 +1082,9 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center text-amber-400 font-bold text-sm shrink-0">{ch.chapter}</div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-white text-sm font-semibold truncate">{ch.english}</h3>
-                    <p className="text-gray-500 text-xs truncate">{ch.subtitle}</p>
+                    <p className="text-gray-400 text-xs truncate">{ch.subtitle}</p>
                   </div>
-                  <span className="text-gray-600 text-xs shrink-0">{ch.verseCount}v →</span>
+                  <span className="text-gray-400 text-xs shrink-0">{ch.verseCount}v →</span>
                 </div>
               </button>
             ))
@@ -1083,7 +1095,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/30 to-orange-500/20 flex items-center justify-center text-amber-300 font-bold">{selectedChapter}</div>
                 <div>
                   <h3 className="text-white font-bold">{CHAPTER_NAMES[selectedChapter]?.english}</h3>
-                  <p className="text-gray-500 text-xs">{CHAPTER_NAMES[selectedChapter]?.subtitle}</p>
+                  <p className="text-gray-400 text-xs">{CHAPTER_NAMES[selectedChapter]?.subtitle}</p>
                 </div>
               </div>
               {loading ? <Spinner label="Loading verses" /> : (
@@ -1133,7 +1145,7 @@ function VoiceWave({ active }) {
   return (
     <div className="flex items-center gap-[2px] h-4">
       {Array.from({ length: bars }).map((_, i) => (
-        <div key={i} className={`w-[3px] rounded-full transition-all duration-150 ${active ? 'bg-red-400' : 'bg-gray-600'}`}
+        <div key={i} className={`w-[3px] rounded-full transition-all duration-150 ${active ? 'bg-red-400' : 'bg-gray-500'}`}
           style={{ height: active ? `${8 + Math.random() * 12}px` : '3px', animationDelay: `${i * 80}ms` }} />
       ))}
     </div>
@@ -1180,7 +1192,7 @@ function LanguageSelector() {
               }`}>
               <span className="text-base">{lang.flag}</span>
               <span className="font-medium">{lang.native}</span>
-              <span className="text-gray-600 text-xs ml-auto">{lang.label}</span>
+              <span className="text-gray-400 text-xs ml-auto">{lang.label}</span>
             </button>
           ))}
         </div>
@@ -1499,7 +1511,7 @@ export default function App() {
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 flex items-center justify-center text-lg shadow-lg shadow-amber-500/20 animate-float">🕉</div>
             <div>
               <h1 className="font-bold text-base text-white tracking-tight">Gita Gyan</h1>
-              <p className="text-[10px] text-gray-500 tracking-widest uppercase">AI Spiritual Mentor</p>
+              <p className="text-[10px] text-gray-400 tracking-widest uppercase">AI Spiritual Mentor</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -1525,42 +1537,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tab Navigation - Bottom Bar Style */}
-        <div className="max-w-2xl mx-auto px-5 pb-2 flex gap-1">
-          {mainTabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => { if (tab.key === 'more') setShowMoreMenu(!showMoreMenu); else { setActiveTab(tab.key); setShowMoreMenu(false); } }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                activeTab === tab.key && tab.key !== 'more'
-                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                  : showMoreMenu && tab.key === 'more'
-                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* More Menu Dropdown */}
-        {showMoreMenu && (
-          <div className="absolute top-full left-0 right-0 z-40 bg-gray-900/98 backdrop-blur-2xl border-t border-white/5 shadow-2xl shadow-black/50 animate-slide-down">
-            <div className="max-w-2xl mx-auto px-4 py-4">
-              <div className="grid grid-cols-4 gap-2">
-                {moreItems.map(item => (
-                  <button key={item.key} onClick={() => { setActiveTab(item.key); setShowMoreMenu(false); }}
-                    className="flex flex-col items-center gap-1 p-3 rounded-2xl hover:bg-white/5 transition-all">
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="text-[10px] text-gray-400 text-center leading-tight">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Content */}
@@ -1619,7 +1595,7 @@ export default function App() {
                     style={{ minHeight: '44px', maxHeight: '120px' }}
                     onInput={e => { e.target.style.height = '44px'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
                   {input.length > 0 && (
-                    <span className={`absolute bottom-1 right-3 text-[10px] ${input.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-red-400' : 'text-gray-600'}`}>
+                    <span className={`absolute bottom-1 right-3 text-[10px] ${input.length > MAX_MESSAGE_LENGTH * 0.9 ? 'text-red-400' : 'text-gray-400'}`}>
                       {input.length}/{MAX_MESSAGE_LENGTH}
                     </span>
                   )}
@@ -1631,7 +1607,7 @@ export default function App() {
                   </svg>
                 </button>
               </div>
-              <p className="text-center text-[9px] text-gray-700 mt-2 tracking-widest uppercase">{t('chat.poweredBy')}</p>
+              <p className="text-center text-[9px] text-gray-500 mt-2 tracking-widest uppercase">{t('chat.poweredBy')}</p>
             </div>
           </footer>
         </>
@@ -1658,6 +1634,49 @@ export default function App() {
       {activeTab === 'bookmarks' && <BookmarksPage />}
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
+
+      {/* Bottom Navigation Bar — mobile convention */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-2xl border-t border-white/5 pb-safe" role="navigation" aria-label="Main navigation">
+        <div className="max-w-2xl mx-auto flex items-center justify-around px-2 py-1">
+          {mainTabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => { if (tab.key === 'more') setShowMoreMenu(!showMoreMenu); else { setActiveTab(tab.key); setShowMoreMenu(false); } }}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-[10px] font-medium transition-all min-w-[56px] ${
+                activeTab === tab.key && tab.key !== 'more'
+                  ? 'text-amber-400'
+                  : showMoreMenu && tab.key === 'more'
+                    ? 'text-amber-400'
+                    : 'text-gray-500 hover:text-gray-300'
+              }`}
+              aria-current={activeTab === tab.key ? 'page' : undefined}
+            >
+              <span className="text-lg" aria-hidden="true">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* More Menu — slides up from bottom */}
+        {showMoreMenu && (
+          <div className="absolute bottom-full left-0 right-0 bg-gray-900/98 backdrop-blur-2xl border-t border-white/5 shadow-2xl shadow-black/50 animate-slide-down">
+            <div className="max-w-2xl mx-auto px-4 py-4">
+              <div className="grid grid-cols-4 gap-2">
+                {moreItems.map(item => (
+                  <button key={item.key} onClick={() => { setActiveTab(item.key); setShowMoreMenu(false); }}
+                    className="flex flex-col items-center gap-1 p-3 rounded-2xl hover:bg-white/5 transition-all">
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-[10px] text-gray-400 text-center leading-tight">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* Spacer for fixed bottom nav */}
+      <div className="h-20" aria-hidden="true" />
     </div>
     </ErrorBoundary>
   );
