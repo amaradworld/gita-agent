@@ -221,13 +221,13 @@ export function MoodCheckinPage() {
         <p className="text-gray-500 text-sm">{t('mood.subtitle', 'Check in and get personalized guidance')}</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-8">
+      <div className="grid grid-cols-3 gap-3 mb-8" role="radiogroup" aria-label="Select your mood">
         {moods.map(mood => (
-          <button key={mood.key} onClick={() => selectMood(mood)}
+          <button key={mood.key} onClick={() => selectMood(mood)} role="radio" aria-checked={selectedMood?.key === mood.key} aria-label={mood.label}
             className={`bg-gradient-to-br ${mood.color} rounded-2xl border p-4 text-center transition-all hover:scale-105 ${
               selectedMood?.key === mood.key ? 'border-amber-500/40 shadow-lg shadow-amber-500/10' : 'border-white/5'
             }`}>
-            <span className="text-3xl">{mood.icon}</span>
+            <span className="text-3xl" aria-hidden="true">{mood.icon}</span>
             <p className="text-white text-xs mt-1 font-medium">{mood.label}</p>
           </button>
         ))}

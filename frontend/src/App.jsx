@@ -154,7 +154,9 @@ function DailyVersePage({ onSpeak, speakingId }) {
       </div>
 
       {loading ? (
-        <Spinner label="Loading daily verse" />
+        <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-3xl border border-white/5 p-6 shadow-2xl" aria-hidden="true">
+          <Skeleton lines={4} />
+        </div>
       ) : dailyVerse ? (
         <div className="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-3xl border border-white/5 p-6 shadow-2xl">
           <div className="text-center mb-4">
@@ -407,6 +409,7 @@ function ScenarioPage({ onSendMessage }) {
             onKeyDown={e => { if (e.key === 'Enter' && query.trim()) searchScenario(query); }}
             placeholder={t('scenario.placeholder', 'Describe your situation...')}
             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all"
+            aria-label={t('scenario.placeholder', 'Describe your situation...')}
           />
           <button
             onClick={() => query.trim() && searchScenario(query)}
@@ -1326,17 +1329,30 @@ export default function App() {
     }
   };
 
+  const MAX_MESSAGES = 100;
   const sendMessage = async (overrideMsg) => {
     const msg = overrideMsg || input.trim();
     if (!msg || loading) return;
-    setInput(''); setMessages(prev => [...prev, { role: 'user', content: msg }]); setLoading(true);
+    setInput('');
+    setMessages(prev => {
+      const updated = [...prev, { role: 'user', content: msg }];
+      return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
+    });
+    setLoading(true);
     setActiveTab('chat');
     try {
       const res = await fetch(`${API}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, lang: i18n.language }) });
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions }]);
+      setMessages(prev => {
+        const updated = [...prev, { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions }];
+        return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
+      });
       if (autoRead && data.verse?.translation) setTimeout(() => speak(`${data.verse.translation}. ${data.message}`, 'auto-' + Date.now()), 500);
-    } catch { toast.error(t('chat.connectionError')); setMessages(prev => [...prev, { role: 'assistant', content: t('chat.genericError'), verse: null }]); }
+    } catch { toast.error(t('chat.connectionError')); setMessages(prev => {
+      const updated = [...prev, { role: 'assistant', content: t('chat.genericError'), verse: null }];
+      return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
+    }); }
     finally { setLoading(false); }
   };
 

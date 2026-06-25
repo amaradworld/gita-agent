@@ -229,9 +229,9 @@ export function VerseCardPage() {
       </div>
 
       {/* Color picker */}
-      <div className="flex gap-2 mb-6 justify-center">
+      <div className="flex gap-2 mb-6 justify-center" role="radiogroup" aria-label="Card background color">
         {backgrounds.map((b, i) => (
-          <button key={i} onClick={() => setBg(i)}
+          <button key={i} onClick={() => setBg(i)} role="radio" aria-checked={bg === i} aria-label={`Color option ${i + 1}`}
             className={`w-8 h-8 rounded-full bg-gradient-to-br ${b} ${bg === i ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-950' : ''}`} />
         ))}
       </div>
@@ -324,9 +324,9 @@ export function CharacterPage() {
       <p className="text-gray-500 text-xs text-center mb-4">Question {step + 1} of {questions.length}</p>
 
       <h3 className="text-white text-lg font-medium mb-6 text-center">{questions[step].q}</h3>
-      <div className="space-y-3">
+      <div className="space-y-3" role="radiogroup" aria-label={questions[step].q}>
         {questions[step].options.map((opt, i) => (
-          <button key={i} onClick={() => answer(i)}
+          <button key={i} onClick={() => answer(i)} role="radio" aria-checked={false}
             className="w-full text-left bg-white/[0.02] rounded-2xl border border-white/5 p-4 text-gray-300 hover:bg-white/5 hover:border-amber-500/20 transition-all">
             {opt}
           </button>
@@ -623,9 +623,11 @@ export function BookmarksPage() {
       </div>
 
       <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 mb-6">
-        <input value={verseKey} onChange={e => setVerseKey(e.target.value)} placeholder="Verse (e.g. 2.47)"
+        <label htmlFor="bookmark-verse" className="sr-only">Verse key</label>
+        <input id="bookmark-verse" value={verseKey} onChange={e => setVerseKey(e.target.value)} placeholder="Verse (e.g. 2.47)"
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 mb-2 transition-all" />
-        <input value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note (optional)"
+        <label htmlFor="bookmark-note" className="sr-only">Add a note</label>
+        <input id="bookmark-note" value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note (optional)"
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 mb-2 transition-all" />
         <button onClick={add} className="w-full py-2.5 rounded-xl bg-amber-500/20 text-amber-400 text-sm font-medium hover:bg-amber-500/30 transition-all">+ Add Bookmark</button>
       </div>
@@ -638,7 +640,7 @@ export function BookmarksPage() {
               <p className="text-white text-sm font-medium">Verse {bm.verseKey}</p>
               {bm.note && <p className="text-gray-500 text-xs">{bm.note}</p>}
             </div>
-            <button onClick={() => remove(bm.verseKey)} className="text-gray-600 hover:text-red-400 text-xs transition-colors">✕</button>
+            <button onClick={() => remove(bm.verseKey)} className="text-gray-600 hover:text-red-400 text-xs transition-colors" aria-label={`Remove bookmark for verse ${bm.verseKey}`}>✕</button>
           </div>
         ))}
         {bookmarks.length === 0 && <p className="text-center text-gray-500 text-sm py-8">No bookmarks yet</p>}
