@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, Component } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, Component, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import SpeakingButton from './components/SpeakingButton';
 import DynamicBackground from './components/DynamicBackground';
-import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premium/AskKrishna';
-import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
 import { isFirstVisit, markVisited, getUserId, getReadingStats, recordActivity, getStreak, updateStreak } from './lib/storage';
 import LandingPage from './pages/LandingPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -18,6 +17,23 @@ import ContributionGraph from './components/ContributionGraph';
 import KrishnaTypingIndicator from './components/KrishnaTypingIndicator';
 import FollowUpQuestions, { getFollowUpQuestions } from './components/FollowUpQuestions';
 import { setupDailyNotifications } from './lib/notifications';
+import { achievementConfetti, haptic } from './lib/confetti';
+
+/* ─── Lazy-loaded premium pages (code splitting) ─── */
+const AskKrishnaPage = lazy(() => import('./premium/AskKrishna').then(m => ({ default: m.AskKrishnaPage })));
+const JournalPage = lazy(() => import('./premium/AskKrishna').then(m => ({ default: m.JournalPage })));
+const MoodCheckinPage = lazy(() => import('./premium/AskKrishna').then(m => ({ default: m.MoodCheckinPage })));
+const QuizPage = lazy(() => import('./premium/AskKrishna').then(m => ({ default: m.QuizPage })));
+const LearningPathPage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.LearningPathPage })));
+const MeditationPage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.MeditationPage })));
+const VerseCardPage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.VerseCardPage })));
+const CharacterPage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.CharacterPage })));
+const CalmModePage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.CalmModePage })));
+const StoryModePage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.StoryModePage })));
+const DebateModePage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.DebateModePage })));
+const BookmarksPage = lazy(() => import('./premium/PremiumPages').then(m => ({ default: m.BookmarksPage })));
+const SleepPage = lazy(() => import('./pages/SleepPage'));
+const ReferralPage = lazy(() => import('./pages/ReferralPage'));
 
 const API = '';
 
@@ -1590,6 +1606,8 @@ export default function App() {
     { key: 'weekly-report', label: t('nav.weeklyReport', 'Report'), icon: '📊' },
     { key: 'recommendations', label: t('nav.recommend', 'For You'), icon: '✨' },
     { key: 'notifications', label: t('nav.notify', 'Notify'), icon: '🔔' },
+    { key: 'sleep', label: t('nav.sleep', 'Sleep'), icon: '🌙' },
+    { key: 'referral', label: t('nav.referral', 'Invite'), icon: '💌' },
     { key: 'privacy', label: t('nav.privacy', 'Privacy'), icon: '🔒' },
     { key: 'terms', label: t('nav.terms', 'Terms'), icon: '📄' },
   ];
@@ -1820,21 +1838,27 @@ export default function App() {
       {activeTab === 'scenario' && <ScenarioPage onSendMessage={sendMessage} />}
       {activeTab === 'community' && <CommunityPage />}
       {activeTab === 'gamification' && <GamificationPage />}
-      {activeTab === 'ask-krishna' && <AskKrishnaPage />}
-      {activeTab === 'quiz' && <QuizPage />}
-      {activeTab === 'mood' && <MoodCheckinPage />}
-      {activeTab === 'journal' && <JournalPage />}
-      {activeTab === 'learning' && <LearningPathPage />}
-      {activeTab === 'meditation' && <MeditationPage />}
-      {activeTab === 'verse-cards' && <VerseCardPage />}
-      {activeTab === 'characters' && <CharacterPage />}
-      {activeTab === 'calm' && <CalmModePage />}
-      {activeTab === 'stories' && <StoryModePage />}
-      {activeTab === 'debate' && <DebateModePage />}
-      {activeTab === 'bookmarks' && <BookmarksPage />}
       {activeTab === 'challenge' && <ChallengePage onSendMessage={sendMessage} />}
       {activeTab === 'weekly-report' && <WeeklyReport />}
       {activeTab === 'recommendations' && <RecommendationsPage onSendMessage={sendMessage} />}
+
+      {/* Lazy-loaded pages with suspense */}
+      <Suspense fallback={<div className="text-center py-12"><div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto" /></div>}>
+        {activeTab === 'ask-krishna' && <AskKrishnaPage />}
+        {activeTab === 'quiz' && <QuizPage />}
+        {activeTab === 'mood' && <MoodCheckinPage />}
+        {activeTab === 'journal' && <JournalPage />}
+        {activeTab === 'learning' && <LearningPathPage />}
+        {activeTab === 'meditation' && <MeditationPage />}
+        {activeTab === 'verse-cards' && <VerseCardPage />}
+        {activeTab === 'characters' && <CharacterPage />}
+        {activeTab === 'calm' && <CalmModePage />}
+        {activeTab === 'stories' && <StoryModePage />}
+        {activeTab === 'debate' && <DebateModePage />}
+        {activeTab === 'bookmarks' && <BookmarksPage />}
+        {activeTab === 'sleep' && <SleepPage />}
+        {activeTab === 'referral' && <ReferralPage />}
+      </Suspense>
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
 
