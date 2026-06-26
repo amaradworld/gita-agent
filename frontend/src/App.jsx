@@ -9,6 +9,15 @@ import { isFirstVisit, markVisited, getUserId, getReadingStats, recordActivity, 
 import LandingPage from './pages/LandingPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import OnboardingPage from './pages/OnboardingPage';
+import ChallengePage from './pages/ChallengePage';
+import WeeklyReport from './pages/WeeklyReport';
+import RecommendationsPage from './pages/RecommendationsPage';
+import AmbientMusic from './components/AmbientMusic';
+import ContributionGraph from './components/ContributionGraph';
+import KrishnaTypingIndicator from './components/KrishnaTypingIndicator';
+import FollowUpQuestions, { getFollowUpQuestions } from './components/FollowUpQuestions';
+import { setupDailyNotifications } from './lib/notifications';
 
 const API = '';
 
@@ -256,6 +265,11 @@ function JourneyPage() {
             <div className="text-gray-400 text-xs mt-0.5">{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Contribution Graph */}
+      <div className="mb-6">
+        <ContributionGraph />
       </div>
 
       {/* Progress Bar */}
@@ -1226,7 +1240,12 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(() => !localStorage.getItem('gita-entered'));
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('gita-onboarding-done') && !!localStorage.getItem('gita-entered'));
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('gita-font-size') || '14');
+  const [streamingContent, setStreamingContent] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [ambientEnabled, setAmbientEnabled] = useState(false);
+  const [followUps, setFollowUps] = useState(null);
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
@@ -1402,6 +1421,7 @@ export default function App() {
       return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
     });
     setLoading(true);
+    setFollowUps(null);
     setActiveTab('chat');
 
     // Detect mood from message for dynamic background
@@ -1423,28 +1443,74 @@ export default function App() {
           });
         }, 1000);
         toast.error(`Rate limited. Wait ${retryAfter}s.`);
-        setMessages(prev => prev.slice(0, -1)); // remove the user message
+        setMessages(prev => prev.slice(0, -1));
         setLoading(false);
         return;
       }
       if (!res.ok) throw new Error(res.status);
-      const data = await res.json();
-      // Track activity for streak
-      if (data.verse) {
-        const verseKey = `${data.verse.chapter}.${data.verse.verse}`;
-        recordActivity(getUserId(), verseKey);
-        updateStreak(getUserId());
+
+      // Check if streaming response
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
+        // Streaming mode
+        setIsStreaming(true);
+        setStreamingContent('');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process SSE lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep incomplete line
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.text) {
+                  fullContent += data.text;
+                  setStreamingContent(fullContent);
+                }
+              } catch {}
+            }
+          }
+        }
+
+        setIsStreaming(false);
+        setStreamingContent('');
+        if (fullContent) {
+          setMessages(prev => {
+            const updated = [...prev, { role: 'assistant', content: fullContent, verse: null, emotions: [] }];
+            return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
+          });
+          setFollowUps(getFollowUpQuestions(fullContent));
+        }
+      } else {
+        // Normal JSON response
+        const data = await res.json();
+        if (data.verse) {
+          const verseKey = `${data.verse.chapter}.${data.verse.verse}`;
+          recordActivity(getUserId(), verseKey);
+          updateStreak(getUserId());
+        }
+        setMessages(prev => {
+          const updated = [...prev, { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions }];
+          return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
+        });
+        setFollowUps(getFollowUpQuestions(data.message));
+        if (autoRead && data.verse?.translation) setTimeout(() => speak(`${data.verse.translation}. ${data.message}`, 'auto-' + Date.now()), 500);
       }
-      setMessages(prev => {
-        const updated = [...prev, { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions }];
-        return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
-      });
-      if (autoRead && data.verse?.translation) setTimeout(() => speak(`${data.verse.translation}. ${data.message}`, 'auto-' + Date.now()), 500);
     } catch { toast.error(t('chat.connectionError')); setMessages(prev => {
       const updated = [...prev, { role: 'assistant', content: t('chat.genericError'), verse: null }];
       return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
     }); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setIsStreaming(false); }
   };
 
   /* ─── Regenerate last AI response ─── */
@@ -1489,15 +1555,6 @@ export default function App() {
     };
   }, []);
 
-  // Onboarding — show tooltip on first visit
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    if (isFirstVisit()) {
-      setShowOnboarding(true);
-      markVisited();
-    }
-  }, []);
-
   // Font size persistence
   useEffect(() => {
     document.documentElement.style.fontSize = fontSize + 'px';
@@ -1529,6 +1586,10 @@ export default function App() {
     { key: 'debate', label: t('nav.debateMode', 'Debate'), icon: '⚖️' },
     { key: 'bookmarks', label: t('nav.bookmarks', 'Bookmarks'), icon: '🔖' },
     { key: 'gamification', label: t('nav.achievements', 'Rewards'), icon: '🏆' },
+    { key: 'challenge', label: t('nav.challenge', 'Challenge'), icon: '⚡' },
+    { key: 'weekly-report', label: t('nav.weeklyReport', 'Report'), icon: '📊' },
+    { key: 'recommendations', label: t('nav.recommend', 'For You'), icon: '✨' },
+    { key: 'notifications', label: t('nav.notify', 'Notify'), icon: '🔔' },
     { key: 'privacy', label: t('nav.privacy', 'Privacy'), icon: '🔒' },
     { key: 'terms', label: t('nav.terms', 'Terms'), icon: '📄' },
   ];
@@ -1553,6 +1614,18 @@ export default function App() {
   if (showLanding) return (
     <ErrorBoundary>
       <LandingPage onEnterApp={handleEnterApp} onLanguageChange={(lang) => i18n.changeLanguage(lang)} />
+    </ErrorBoundary>
+  );
+
+  if (showOnboarding) return (
+    <ErrorBoundary>
+      <OnboardingPage onComplete={(lang, purposes) => {
+        i18n.changeLanguage(lang);
+        setShowOnboarding(false);
+        localStorage.setItem('gita-onboarding-done', '1');
+        localStorage.setItem('gita-entered', '1');
+        localStorage.setItem('gita-purposes', JSON.stringify(purposes));
+      }} onLanguageChange={(lang) => i18n.changeLanguage(lang)} />
     </ErrorBoundary>
   );
 
@@ -1581,35 +1654,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Onboarding Tooltip — first visit only */}
-      {showOnboarding && (
-        <div className="fixed inset-0 z-[60] bg-black/80 flex items-end justify-center p-4 animate-fade-in" onClick={() => setShowOnboarding(false)}>
-          <div className="bg-gradient-to-b from-gray-900 to-gray-950 border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl shadow-amber-500/10 animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="text-4xl mb-3">🕉</div>
-            <h3 className="text-white font-bold text-lg mb-2">Welcome to Gita Gyan</h3>
-            <p className="text-gray-400 text-sm mb-4">Your AI spiritual mentor. Ask anything about life, emotions, or wisdom from the Bhagavad Gita.</p>
-            <div className="space-y-2 text-left mb-4">
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <span className="text-lg">💬</span><span>Chat with Krishna — ask anything</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <span className="text-lg">📖</span><span>Daily verse to start your day</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <span className="text-lg">🫂</span><span>Emergency Calm for stressful moments</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <span className="text-lg">☰</span><span>Tap <strong>More</strong> for 16+ features</span>
-              </div>
-            </div>
-            <button onClick={() => setShowOnboarding(false)}
-              className="w-full py-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-medium hover:scale-105 transition-all">
-              Start Exploring 🙏
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="relative z-10 border-b border-white/5 bg-gray-950/80 backdrop-blur-2xl">
         <div className="max-w-2xl mx-auto flex items-center justify-between px-5 py-3.5">
@@ -1622,6 +1666,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-1.5">
             <LanguageSelector />
+            <AmbientMusic enabled={ambientEnabled} onToggle={setAmbientEnabled} />
             {/* Font size controls */}
             <div className="flex items-center gap-0.5 bg-white/5 rounded-xl border border-white/5 px-1 py-0.5" role="radiogroup" aria-label="Font size">
               {[{s:'12',l:'A'},{s:'14',l:'A'},{s:'16',l:'A'}].map(({s,l}) => (
@@ -1695,9 +1740,22 @@ export default function App() {
                 </div>
                 );
               })}
-              {loading && (
+              {loading && !isStreaming && (
                 <div className="flex justify-start animate-slide-up">
-                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl rounded-bl-md border border-white/5"><TypingIndicator /></div>
+                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl rounded-bl-md border border-white/5"><KrishnaTypingIndicator /></div>
+                </div>
+              )}
+              {isStreaming && streamingContent && (
+                <div className="flex justify-start animate-slide-up">
+                  <div className="max-w-[85%] bg-white/5 backdrop-blur-xl text-gray-200 rounded-2xl rounded-bl-md border border-white/5 px-4 py-3">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamingContent}<span className="inline-block w-1.5 h-4 bg-amber-400 ml-0.5 animate-pulse" /></p>
+                  </div>
+                </div>
+              )}
+              {/* Follow-up questions after last AI message */}
+              {!loading && followUps && messages.length > 1 && messages[messages.length - 1].role === 'assistant' && (
+                <div className="px-2">
+                  <FollowUpQuestions questions={followUps} onSelect={(q) => { setFollowUps(null); sendMessage(q); }} />
                 </div>
               )}
               {/* Suggested prompts — only show when chat is empty */}
@@ -1774,6 +1832,9 @@ export default function App() {
       {activeTab === 'stories' && <StoryModePage />}
       {activeTab === 'debate' && <DebateModePage />}
       {activeTab === 'bookmarks' && <BookmarksPage />}
+      {activeTab === 'challenge' && <ChallengePage onSendMessage={sendMessage} />}
+      {activeTab === 'weekly-report' && <WeeklyReport />}
+      {activeTab === 'recommendations' && <RecommendationsPage onSendMessage={sendMessage} />}
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
 
@@ -1808,6 +1869,11 @@ export default function App() {
                   <button key={item.key} onClick={() => {
                     if (item.key === 'privacy') { setShowPrivacy(true); }
                     else if (item.key === 'terms') { setShowTerms(true); }
+                    else if (item.key === 'notifications') {
+                      setupDailyNotifications().then(ok => {
+                        toast.success(ok ? 'Daily notifications enabled!' : 'Notifications blocked by browser');
+                      });
+                    }
                     else { setActiveTab(item.key); }
                     setShowMoreMenu(false);
                   }}
