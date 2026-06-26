@@ -6,6 +6,9 @@ import DynamicBackground from './components/DynamicBackground';
 import { AskKrishnaPage, JournalPage, MoodCheckinPage, QuizPage } from './premium/AskKrishna';
 import { LearningPathPage, MeditationPage, VerseCardPage, CharacterPage, CalmModePage, StoryModePage, DebateModePage, BookmarksPage } from './premium/PremiumPages';
 import { isFirstVisit, markVisited, getUserId, getReadingStats, recordActivity, getStreak, updateStreak } from './lib/storage';
+import LandingPage from './pages/LandingPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 
 const API = '';
 
@@ -1220,6 +1223,10 @@ export default function App() {
   const [showChapterBrowser, setShowChapterBrowser] = useState(false);
   const [autoRead, setAutoRead] = useState(false);
   const [currentMood, setCurrentMood] = useState('default');
+  const [showLanding, setShowLanding] = useState(() => !localStorage.getItem('gita-entered'));
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('gita-font-size') || '14');
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
@@ -1440,6 +1447,33 @@ export default function App() {
     finally { setLoading(false); }
   };
 
+  /* ─── Regenerate last AI response ─── */
+  const regenerateLast = async () => {
+    if (loading) return;
+    const lastUserIdx = [...messages].reverse().findIndex(m => m.role === 'user');
+    if (lastUserIdx < 0) return;
+    const lastUserMsg = messages[messages.length - 1 - lastUserIdx];
+    // Remove the last AI response
+    setMessages(prev => prev.slice(0, -1));
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: lastUserMsg.content, lang: i18n.language }) });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message, verse: data.verse, emotions: data.emotions }]);
+    } catch {
+      toast.error('Failed to regenerate');
+    } finally { setLoading(false); }
+  };
+
+  /* ─── Copy message to clipboard ─── */
+  const copyMessage = (text) => {
+    navigator.clipboard.writeText(text).then(
+      () => toast.success('Copied to clipboard'),
+      () => toast.error('Failed to copy')
+    );
+  };
+
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
@@ -1463,6 +1497,12 @@ export default function App() {
       markVisited();
     }
   }, []);
+
+  // Font size persistence
+  useEffect(() => {
+    document.documentElement.style.fontSize = fontSize + 'px';
+    localStorage.setItem('gita-font-size', fontSize);
+  }, [fontSize]);
 
   const mainTabs = [
     { key: 'chat', label: t('nav.chat', 'Chat'), icon: '💬' },
@@ -1489,7 +1529,44 @@ export default function App() {
     { key: 'debate', label: t('nav.debateMode', 'Debate'), icon: '⚖️' },
     { key: 'bookmarks', label: t('nav.bookmarks', 'Bookmarks'), icon: '🔖' },
     { key: 'gamification', label: t('nav.achievements', 'Rewards'), icon: '🏆' },
+    { key: 'privacy', label: t('nav.privacy', 'Privacy'), icon: '🔒' },
+    { key: 'terms', label: t('nav.terms', 'Terms'), icon: '📄' },
   ];
+
+  /* ─── Suggested prompts for empty chat ─── */
+  const suggestedPrompts = [
+    { text: t('chat.suggest1', 'How do I deal with stress?'), icon: '😌' },
+    { text: t('chat.suggest2', 'What is my life purpose?'), icon: '🌟' },
+    { text: t('chat.suggest3', 'Teach me about karma'), icon: '⚖️' },
+    { text: t('chat.suggest4', 'Guide me through meditation'), icon: '🧘' },
+    { text: t('chat.suggest5', 'Help me find inner peace'), icon: '☮️' },
+    { text: t('chat.suggest6', 'What does the Gita say about death?'), icon: '🕊️' },
+  ];
+
+  /* ─── Handle enter from landing page ─── */
+  const handleEnterApp = (lang) => {
+    i18n.changeLanguage(lang);
+    setShowLanding(false);
+    localStorage.setItem('gita-entered', '1');
+  };
+
+  if (showLanding) return (
+    <ErrorBoundary>
+      <LandingPage onEnterApp={handleEnterApp} onLanguageChange={(lang) => i18n.changeLanguage(lang)} />
+    </ErrorBoundary>
+  );
+
+  if (showPrivacy) return (
+    <ErrorBoundary>
+      <PrivacyPage onBack={() => setShowPrivacy(false)} />
+    </ErrorBoundary>
+  );
+
+  if (showTerms) return (
+    <ErrorBoundary>
+      <TermsPage onBack={() => setShowTerms(false)} />
+    </ErrorBoundary>
+  );
 
   return (
     <ErrorBoundary>
@@ -1545,6 +1622,16 @@ export default function App() {
           </div>
           <div className="flex items-center gap-1.5">
             <LanguageSelector />
+            {/* Font size controls */}
+            <div className="flex items-center gap-0.5 bg-white/5 rounded-xl border border-white/5 px-1 py-0.5" role="radiogroup" aria-label="Font size">
+              {[{s:'12',l:'A'},{s:'14',l:'A'},{s:'16',l:'A'}].map(({s,l}) => (
+                <button key={s} onClick={() => setFontSize(s)}
+                  role="radio" aria-checked={fontSize === s} aria-label={`Font size ${s}px`}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all text-${s === '12' ? 'xs' : s === '16' ? 'base' : 'sm'} ${fontSize === s ? 'bg-amber-500/20 text-amber-400' : 'text-gray-500 hover:text-gray-300'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
             {activeTab === 'chat' && (
               <>
                 <button onClick={() => setAutoRead(!autoRead)}
@@ -1573,7 +1660,9 @@ export default function App() {
         <>
           <main id="main-content" className="flex-1 overflow-y-auto relative z-10 px-4 py-6 scrollbar-thin">
             <div className="max-w-2xl mx-auto space-y-4">
-              {messages.map((msg, i) => (
+              {messages.map((msg, i) => {
+                const isLastAI = msg.role === 'assistant' && i === messages.length - 1 && !loading;
+                return (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                     msg.role === 'user'
@@ -1590,16 +1679,40 @@ export default function App() {
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                     {msg.verse && <VerseCard verse={msg.verse} onSpeak={speak} speakingId={speakingId} />}
                     {msg.role === 'assistant' && msg.content && (
-                      <div className="mt-2 pt-2 border-t border-white/5">
+                      <div className="mt-2 pt-2 border-t border-white/5 flex items-center gap-2">
                         <SpeakingButton isSpeaking={speakingId === i} onToggle={() => speak(msg.content, i, msg.emotions?.[0] || 'default')} size="sm" />
+                        <button onClick={() => copyMessage(msg.content)} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all" title="Copy message">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        {isLastAI && messages.length >= 2 && (
+                          <button onClick={regenerateLast} disabled={loading} className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all disabled:opacity-30" title="Regenerate response">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {loading && (
                 <div className="flex justify-start animate-slide-up">
                   <div className="bg-white/5 backdrop-blur-xl rounded-2xl rounded-bl-md border border-white/5"><TypingIndicator /></div>
+                </div>
+              )}
+              {/* Suggested prompts — only show when chat is empty */}
+              {messages.length === 1 && !loading && (
+                <div className="pt-4 animate-fade-in">
+                  <p className="text-gray-500 text-xs text-center mb-3 uppercase tracking-wider font-medium">{t('chat.tryAsking', 'Try asking')}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {suggestedPrompts.map((p, i) => (
+                      <button key={i} onClick={() => sendMessage(p.text)}
+                        className="text-left px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-amber-500/5 hover:border-amber-500/10 transition-all group">
+                        <span className="text-lg mr-2">{p.icon}</span>
+                        <span className="text-gray-300 text-xs group-hover:text-amber-200 transition-colors">{p.text}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               <div ref={chatEnd} />
@@ -1692,7 +1805,12 @@ export default function App() {
             <div className="max-w-2xl mx-auto px-4 py-4">
               <div className="grid grid-cols-4 gap-2">
                 {moreItems.map(item => (
-                  <button key={item.key} onClick={() => { setActiveTab(item.key); setShowMoreMenu(false); }}
+                  <button key={item.key} onClick={() => {
+                    if (item.key === 'privacy') { setShowPrivacy(true); }
+                    else if (item.key === 'terms') { setShowTerms(true); }
+                    else { setActiveTab(item.key); }
+                    setShowMoreMenu(false);
+                  }}
                     className="flex flex-col items-center gap-1 p-3 rounded-2xl hover:bg-white/5 transition-all">
                     <span className="text-xl">{item.icon}</span>
                     <span className="text-[10px] text-gray-400 text-center leading-tight">{item.label}</span>
