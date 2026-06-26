@@ -16,8 +16,11 @@ import AmbientMusic from './components/AmbientMusic';
 import ContributionGraph from './components/ContributionGraph';
 import KrishnaTypingIndicator from './components/KrishnaTypingIndicator';
 import FollowUpQuestions, { getFollowUpQuestions } from './components/FollowUpQuestions';
+import CommandPalette from './components/CommandPalette';
+import GitaLogo from './components/GitaLogo';
 import { setupDailyNotifications } from './lib/notifications';
 import { achievementConfetti, haptic } from './lib/confetti';
+import { getDailyGreeting } from './lib/dailyGreeting';
 
 /* ─── Lazy-loaded premium pages (code splitting) ─── */
 const AskKrishnaPage = lazy(() => import('./premium/AskKrishna').then(m => ({ default: m.AskKrishnaPage })));
@@ -887,13 +890,21 @@ function GamificationPage() {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [celebrated, setCelebrated] = useState(false);
   const userId = 'guest-' + (localStorage.getItem('gita-user-id') || 'default');
 
   useEffect(() => {
     const ac = new AbortController();
     fetch(`${API}/api/mentor/gamification/${userId}`, { signal: ac.signal })
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(d => { setData(d); setLoading(false); })
+      .then(d => {
+        setData(d);
+        setLoading(false);
+        // Fire confetti for newly unlocked achievements
+        if (d.unlockedCount > 0 && !celebrated) {
+          setTimeout(() => { achievementConfetti(); setCelebrated(true); }, 500);
+        }
+      })
       .catch(e => { if (e.name !== 'AbortError') setLoading(false); });
     return () => ac.abort();
   }, []);
@@ -1262,6 +1273,8 @@ export default function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [ambientEnabled, setAmbientEnabled] = useState(false);
   const [followUps, setFollowUps] = useState(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [dailyGreeting, setDailyGreeting] = useState(null);
   const chatEnd = useRef(null);
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
@@ -1577,6 +1590,23 @@ export default function App() {
     localStorage.setItem('gita-font-size', fontSize);
   }, [fontSize]);
 
+  // Daily greeting
+  useEffect(() => {
+    setDailyGreeting(getDailyGreeting(i18n.language));
+  }, [i18n.language]);
+
+  // Command palette keyboard shortcut (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const mainTabs = [
     { key: 'chat', label: t('nav.chat', 'Chat'), icon: '💬' },
     { key: 'daily', label: t('nav.daily', 'Daily'), icon: '📖' },
@@ -1676,13 +1706,21 @@ export default function App() {
       <header className="relative z-10 border-b border-white/5 bg-gray-950/80 backdrop-blur-2xl">
         <div className="max-w-2xl mx-auto flex items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-500 flex items-center justify-center text-lg shadow-lg shadow-amber-500/20 animate-float">🕉</div>
+            <GitaLogo size={40} />
             <div>
               <h1 className="font-bold text-base text-white tracking-tight">Gita Gyan</h1>
               <p className="text-[10px] text-gray-400 tracking-widest uppercase">AI Spiritual Mentor</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
+            {/* Cmd+K trigger */}
+            <button onClick={() => setShowCommandPalette(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-gray-500 hover:text-gray-300 text-xs transition-all"
+              title="Search (Ctrl+K)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span className="hidden md:inline">Search</span>
+              <kbd className="hidden md:inline px-1 py-0.5 rounded bg-white/5 text-[9px] font-mono">⌘K</kbd>
+            </button>
             <LanguageSelector />
             <AmbientMusic enabled={ambientEnabled} onToggle={setAmbientEnabled} />
             {/* Font size controls */}
@@ -1776,6 +1814,16 @@ export default function App() {
                   <FollowUpQuestions questions={followUps} onSelect={(q) => { setFollowUps(null); sendMessage(q); }} />
                 </div>
               )}
+              {/* Personalized daily greeting */}
+              {messages.length === 1 && !loading && dailyGreeting && (
+                <div className="text-center pt-6 pb-2 animate-fade-in">
+                  <h2 className="text-xl font-bold text-white mb-1">{dailyGreeting.greeting} 🙏</h2>
+                  {dailyGreeting.streakMessage && (
+                    <p className="text-amber-400 text-sm font-medium mb-1">{dailyGreeting.streakMessage}</p>
+                  )}
+                  <p className="text-gray-400 text-xs italic">{dailyGreeting.moodMessage}</p>
+                </div>
+              )}
               {/* Suggested prompts — only show when chat is empty */}
               {messages.length === 1 && !loading && (
                 <div className="pt-4 animate-fade-in">
@@ -1861,6 +1909,13 @@ export default function App() {
       </Suspense>
 
       {showChapterBrowser && <ChapterBrowser onSelectVerse={msg => { setInput(msg); setTimeout(() => sendMessage(msg), 100); }} onClose={() => setShowChapterBrowser(false)} />}
+      {showCommandPalette && (
+        <CommandPalette
+          onNavigate={(key) => { setActiveTab(key); setShowCommandPalette(false); }}
+          onSendMessage={(msg) => { setShowCommandPalette(false); sendMessage(msg); }}
+          onClose={() => setShowCommandPalette(false)}
+        />
+      )}
 
       {/* Bottom Navigation Bar — mobile convention */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-2xl border-t border-white/5 pb-safe" role="navigation" aria-label="Main navigation">

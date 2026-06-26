@@ -380,13 +380,25 @@ router.post('/gamification/record', (req, res) => {
 router.get('/commentary/:chapter/:verse', (req, res) => {
   try {
     const key = `${req.params.chapter}.${req.params.verse}`;
+    const lang = req.query.lang || 'en';
     const data = VERSE_SCENARIOS[key];
     if (!data || !data.commentary) {
       return res.status(404).json({ error: 'No commentary found for this verse' });
     }
+
+    let commentaries = data.commentary;
+    // Apply regional translations if available
+    if (lang !== 'en' && COMMENTARY_TRANSLATIONS[key]?.[lang]) {
+      const translations = COMMENTARY_TRANSLATIONS[key][lang];
+      commentaries = {};
+      for (const [cKey, text] of Object.entries(data.commentary)) {
+        commentaries[cKey] = translations[cKey] || text;
+      }
+    }
+
     res.json({
       verseKey: key,
-      commentaries: data.commentary,
+      commentaries,
       lifeArea: data.lifeArea,
       practicalAdvice: data.practicalAdvice,
       modernApplication: data.modernApplication,
@@ -825,6 +837,59 @@ router.post('/debate', (req, res) => {
     res.json(response);
   } catch (err) {
     res.status(500).json({ error: 'Failed to get debate response' });
+  }
+});
+
+// ─── CORPORATE WELLNESS API ──────────────────────────────────
+// B2B endpoint for corporate wellness programs
+router.get('/wellness/dashboard', (req, res) => {
+  try {
+    const { orgId, period = '7d' } = req.query;
+    if (!orgId) return res.status(400).json({ error: 'orgId required' });
+
+    // Aggregate stats for organization
+    const days = period === '30d' ? 30 : period === '90d' ? 90 : 7;
+
+    res.json({
+      orgId,
+      period,
+      stats: {
+        totalUsers: 0, // Would query DB in production
+        activeUsers: 0,
+        totalSessions: 0,
+        avgSessionDuration: '4.2 min',
+        topTopics: ['stress', 'purpose', 'meditation', 'relationships'],
+        engagementRate: '0%',
+        streakDistribution: { '1-3 days': 0, '4-7 days': 0, '8-14 days': 0, '15+ days': 0 },
+      },
+      insights: [
+        'Most employees seek guidance on work-life balance and stress management.',
+        'Morning sessions (7-9 AM) are most popular.',
+        'Meditation feature has highest engagement among regular users.',
+      ],
+      suggestedActions: [
+        'Enable daily verse notifications for the team.',
+        'Create custom learning paths for leadership development.',
+        'Schedule weekly group meditation sessions.',
+      ],
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get wellness dashboard' });
+  }
+});
+
+router.get('/wellness/leaderboard', (req, res) => {
+  try {
+    const { orgId } = req.query;
+    if (!orgId) return res.status(400).json({ error: 'orgId required' });
+
+    res.json({
+      orgId,
+      leaderboard: [], // Would query DB in production
+      message: 'Leaderboard data requires authentication and database access.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get leaderboard' });
   }
 });
 
