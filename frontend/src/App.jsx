@@ -1163,45 +1163,7 @@ function ChapterBrowser({ onSelectVerse, onClose }) {
   );
 }
 
-/* ─── MicButton ─── */
-function MicButton({ isListening, onToggle, supported }) {
-  const { t } = useTranslation();
-  const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-  const isEnabled = SR && supported !== false;
 
-  return (
-    <button onClick={onToggle}
-      disabled={!isEnabled}
-      className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0 ${
-        !isEnabled
-          ? 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed'
-          : isListening
-            ? 'bg-gradient-to-br from-red-500 to-pink-600 shadow-lg shadow-red-500/30 scale-110'
-            : 'bg-gradient-to-br from-white/10 to-white/5 hover:from-white/15 hover:to-white/10 border border-white/10 hover:border-amber-500/30'
-      }`}
-      title={!isEnabled ? t('chat.voiceNotSupported', 'Voice not supported in this browser') : isListening ? t('chat.stop', 'Stop listening') : t('chat.listen', 'Start voice input')}>
-      {isListening && <><span className="absolute inset-0 rounded-2xl animate-ping bg-red-400 opacity-20"/><span className="absolute -inset-1 rounded-2xl animate-pulse bg-red-500 opacity-10"/></>}
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="relative z-10">
-        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-        <line x1="12" y1="19" x2="12" y2="22"/>
-      </svg>
-    </button>
-  );
-}
-
-/* ─── VoiceWave ─── */
-function VoiceWave({ active }) {
-  const bars = 5;
-  return (
-    <div className="flex items-center gap-[2px] h-4">
-      {Array.from({ length: bars }).map((_, i) => (
-        <div key={i} className={`w-[3px] rounded-full transition-all duration-150 ${active ? 'bg-red-400' : 'bg-gray-500'}`}
-          style={{ height: active ? `${8 + Math.random() * 12}px` : '3px', animationDelay: `${i * 80}ms` }} />
-      ))}
-    </div>
-  );
-}
 
 /* ─── TypingIndicator ─── */
 function TypingIndicator() {
@@ -1259,7 +1221,7 @@ export default function App() {
   const [messages, setMessages] = useState([{ role: 'assistant', content: t('chat.welcome'), verse: null }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+
   const [speakingId, setSpeakingId] = useState(null);
   const [showChapterBrowser, setShowChapterBrowser] = useState(false);
   const [autoRead, setAutoRead] = useState(false);
@@ -1276,8 +1238,6 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [dailyGreeting, setDailyGreeting] = useState(null);
   const chatEnd = useRef(null);
-  const recognitionRef = useRef(null);
-  const isListeningRef = useRef(false);
 
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -1295,104 +1255,7 @@ export default function App() {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
 
-  useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      console.warn('Speech Recognition not supported in this browser');
-      return;
-    }
 
-    const recognition = new SR();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    const langMap = { en:'en-IN', hi:'hi-IN', ta:'ta-IN', te:'te-IN', mr:'mr-IN', bn:'bn-IN', kn:'kn-IN', gu:'gu-IN', ml:'ml-IN' };
-    recognition.lang = langMap[i18n.language] || 'en-IN';
-
-    recognition.onresult = (event) => {
-      let final = '';
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) final += transcript;
-        else interim += transcript;
-      }
-      if (final) {
-        setInput(prev => prev ? prev + ' ' + final : final);
-        setIsListening(false);
-        isListeningRef.current = false;
-      } else if (interim) {
-        setInput(interim);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Speech error:', event.error);
-      if (event.error === 'no-speech') {
-        toast(t('chat.noSpeech', 'No speech detected. Try again.'));
-        setIsListening(false);
-        isListeningRef.current = false;
-        return;
-      }
-      if (event.error === 'aborted') {
-        if (isListeningRef.current) {
-          setTimeout(() => {
-            try { recognition.start(); } catch {}
-          }, 300);
-        }
-        return;
-      }
-      setIsListening(false);
-      isListeningRef.current = false;
-      if (event.error === 'not-allowed') toast.error(t('chat.micDenied', 'Microphone access denied. Please allow mic access in browser settings.'));
-      else if (event.error === 'network') toast.error(t('chat.voiceNetwork', 'Network error. Check your connection.'));
-      else if (event.error !== 'aborted') toast.error(t('chat.voiceFailed', 'Voice recognition failed. Try again.'));
-    };
-
-    recognition.onend = () => {
-      if (isListeningRef.current) {
-        setTimeout(() => {
-          try { recognition.start(); } catch {}
-        }, 200);
-      } else {
-        setIsListening(false);
-      }
-    };
-
-    recognitionRef.current = recognition;
-  }, [i18n.language, t]);
-
-  const toggleVoice = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = recognitionRef.current;
-    if (!rec) {
-      if (!SR) {
-        toast.error(t('chat.voiceNotSupported', 'Voice not supported. Try Chrome or Edge browser.'));
-      } else if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        toast.error(t('chat.voiceHttpsRequired', 'Voice requires HTTPS. Use the deployed URL.'));
-      } else {
-        toast.error(t('chat.voiceFailed', 'Voice recognition failed. Try reloading the page.'));
-      }
-      return;
-    }
-    if (isListeningRef.current) {
-      isListeningRef.current = false;
-      setIsListening(false);
-      try { rec.stop(); } catch {}
-    } else {
-      const langMap = { en:'en-IN', hi:'hi-IN', ta:'ta-IN', te:'te-IN', mr:'mr-IN', bn:'bn-IN', kn:'kn-IN', gu:'gu-IN', ml:'ml-IN' };
-      rec.lang = langMap[i18n.language] || 'en-IN';
-      try {
-        rec.start();
-        isListeningRef.current = true;
-        setIsListening(true);
-        toast(t('chat.listening', 'Listening... Speak now!'), { icon: '🎙️', duration: 2000 });
-      } catch (err) {
-        console.error('Start error:', err);
-        toast.error(t('chat.voiceFailed', 'Could not start voice. Try reloading.'));
-      }
-    }
-  }, [i18n.language, t]);
 
   const audioRef = useRef(null);
 
@@ -1851,8 +1714,6 @@ export default function App() {
                 </div>
               )}
               <div className="flex items-end gap-2">
-                <MicButton isListening={isListening} onToggle={toggleVoice} />
-                {isListening && <VoiceWave active={isListening} />}
                 <div className="flex-1 relative">
                   <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                     placeholder={t('chat.placeholder')} rows={1} maxLength={MAX_MESSAGE_LENGTH}

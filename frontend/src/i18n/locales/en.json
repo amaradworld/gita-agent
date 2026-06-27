@@ -26,12 +26,6 @@
   "chat": {
     "placeholder": "Share what's on your heart...",
     "welcome": "Namaste! I am your Gita Gyan spiritual mentor. Ask me anything about life, emotions, or wisdom from the Bhagavad Gita.",
-    "listening": "Listening... Speak now",
-    "voiceNotSupported": "Voice recognition not supported in this browser. Try Chrome or Edge.",
-    "voiceHttpsRequired": "Voice requires HTTPS. Please use HTTPS or localhost.",
-    "micDenied": "Microphone access denied. Please allow microphone in browser settings.",
-    "noSpeech": "No speech detected. Please try again.",
-    "voiceFailed": "Voice recognition failed. Please try again.",
     "ttsNotSupported": "Text-to-speech not supported in this browser",
     "ttsFailed": "Voice playback failed. Please try again.",
     "connectionError": "Failed to connect. Please try again.",
