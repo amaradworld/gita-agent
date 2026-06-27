@@ -1,0 +1,4 @@
+frontend/android
+frontend/capacitor.config.json
+android.keystore
+frontend/node_modules/

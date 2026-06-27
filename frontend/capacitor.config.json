@@ -1,0 +1,39 @@
+{
+  "appId": "com.GitaGyan",
+  "appName": "Gita Gyan",
+  "webDir": "dist",
+  "server": {
+    "url": "https://gita-agent.vercel.app",
+    "cleartext": false,
+    "allowNavigation": ["*.vercel.app", "*.onrender.com"]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#030712",
+    "buildOptions": {
+      "keystorePath": "../../android.keystore",
+      "keystoreAlias": "gitagyan",
+      "keystorePassword": "GitaGyan2026",
+      "keystoreAliasPassword": "GitaGyan2026"
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 2000,
+      "backgroundColor": "#030712",
+      "androidSplashResourceName": "splash",
+      "showSpinner": true,
+      "spinnerColor": "#F59E0B"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#030712",
+      "overlaysWebView": false
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "DARK"
+    }
+  }
+}
