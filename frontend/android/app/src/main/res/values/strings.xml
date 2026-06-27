@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Gita Gyan</string>
     <string name="title_activity_main">Gita Gyan</string>
-    <string name="package_name">com.GitaGyan</string>
-    <string name="custom_url_scheme">com.GitaGyan</string>
+    <string name="package_name">com.GitaChat</string>
+    <string name="custom_url_scheme">com.GitaChat</string>
 </resources>
